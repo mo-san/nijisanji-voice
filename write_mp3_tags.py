@@ -29,10 +29,13 @@ def parse_file_name(file_name: str) -> Optional[ID3Tags]:
 
     期待されるファイル名のパターン:
     [カテゴリ]キャラクター名 - 番号 タイトル (EX).mp3
+    または
+    [カテゴリ]キャラクター名 - タイトル.mp3
 
     例:
     [ジューンブライド2024ボイス]ソフィア・ヴァレンタイン - 01 ジューンブライド2024ボイス.mp3
     [夜更かしボイス]五十嵐梨花 - 02 夜更かしボイス EX.mp3
+    [お忍びボイス]天宮こころ - お忍びボイス.mp3
     """
     if not file_name.endswith('.mp3'):
         return None
@@ -50,15 +53,16 @@ def parse_file_name(file_name: str) -> Optional[ID3Tags]:
     artist_name = prefix_part[prefix_part.index(']') + 1:]
 
     track_info = track_part.split(' ', 1)
-    if len(track_info) != 2:
-        return None
+    if len(track_info) == 2:
+        try:
+            track_number = int(track_info[0])
+            track_name = track_info[1].replace(" EX", "")
+        except ValueError:
+            return None
+    else:
+        track_number = 1
+        track_name = track_info[0].replace(" EX", "")
 
-    try:
-        track_number = int(track_info[0])
-    except ValueError:
-        return None
-
-    track_name = track_info[1].replace(" EX", "")
     return ID3Tags(
         track_name=track_name,
         artist_name=artist_name,
