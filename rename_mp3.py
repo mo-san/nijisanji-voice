@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import unicodedata
 from typing import Optional, Dict, List, Tuple
 import tkinter as tk
@@ -45,25 +46,25 @@ def generate_new_file_name(character: str, suffix: str, is_ex: bool) -> str:
 def get_renamed_files(path: str) -> List[Tuple[str, str]]:
     """リネーム後のファイル名のリストを取得する"""
     renamed_files = []
-    for file_name in os.listdir(path):
-        if file_name.endswith('.mp3'):
-            normalized_file_name = normalize_file_name(file_name)
-            parsed_name = parse_file_name(normalized_file_name)
+    for file_path in Path(path).rglob('*.mp3'):
+        normalized_file_name = normalize_file_name(file_path.name)
+        parsed_name = parse_file_name(normalized_file_name)
 
-            if not parsed_name:
-                print(f"Skipped: '{file_name}' - does not match expected pattern")
-                continue
+        if not parsed_name:
+            print(f"Skipped: '{file_path}' - does not match expected pattern")
+            continue
 
-            new_name = generate_new_file_name(parsed_name['Character'], parsed_name['Suffix'], parsed_name['IsEX'])
-            renamed_files.append((file_name, new_name))
+        new_name = generate_new_file_name(parsed_name['Character'], parsed_name['Suffix'], parsed_name['IsEX'])
+        new_path = file_path.parent / new_name
+        renamed_files.append((file_path, new_path))
     return renamed_files
 
 def rename_files(path: str, renamed_files: List[Tuple[str, str]], root: tk.Tk) -> None:
     """実際にファイルをリネームする"""
     for old_name, new_name in renamed_files:
-        old_path = os.path.join(path, old_name)
-        new_path = os.path.join(path, new_name)
-        os.rename(old_path, new_path)
+        old_path = Path(path) / old_name
+        new_path = Path(path) / new_name
+        old_path.rename(new_path)
     messagebox.showinfo("完了", "ファイルのリネームが完了しました。")
     root.destroy()
 

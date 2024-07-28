@@ -1,5 +1,6 @@
 import os
 import argparse
+from pathlib import Path
 import unicodedata
 from typing import Optional, TypedDict, List, Tuple
 import tkinter as tk
@@ -85,19 +86,14 @@ def write_id3_tags(file_path: str, tags: ID3Tags) -> None:
 def process_files(path: str) -> List[Tuple[str, ID3Tags]]:
     """ディレクトリ内のファイルにID3タグを書き込む"""
     processed_files = []
-    for file_name in os.listdir(path):
-        if not file_name.endswith('.mp3'):
-            continue
-
-        file_path = os.path.join(path, file_name)
-        tags = parse_file_name(file_name)
+    for file_path in Path(path).rglob('*.mp3'):
+        tags = parse_file_name(file_path.name)
 
         if not tags:
-            print(f"Skipped: {file_name} - does not match expected pattern")
+            print(f"Skipped: {file_path} - does not match expected pattern")
             continue
 
         processed_files.append((file_path, tags))
-
     return processed_files
 
 
