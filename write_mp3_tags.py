@@ -120,16 +120,23 @@ def preview_id3_tags(processed_files: List[Tuple[str, ID3Tags]]) -> None:
     frame = ttk.Frame(root, padding=10)
     frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
+    # ウィンドウの大きさを1.5倍に設定
+    default_width = 800
+    default_height = 600
+    window_width = int(default_width * 1.5)
+    window_height = int(default_height * 1.5)
+    root.geometry(f"{window_width}x{window_height}")
+
     tree = ttk.Treeview(frame, columns=('File Path', 'Title', 'Artist', 'Album', 'Track Number'), show='headings')
-    tree.heading('File Path', text='ファイルパス')
-    tree.heading('Title', text='タイトル')
-    tree.heading('Artist', text='アーティスト')
-    tree.heading('Album', text='アルバム')
-    tree.heading('Track Number', text='トラック番号')
+    tree.heading('File Path', text='ファイルパス', command=lambda: sortby(tree, 'File Path', False))
+    tree.heading('Title', text='タイトル', command=lambda: sortby(tree, 'Title', False))
+    tree.heading('Artist', text='アーティスト', command=lambda: sortby(tree, 'Artist', False))
+    tree.heading('Album', text='アルバム', command=lambda: sortby(tree, 'Album', False))
+    tree.heading('Track Number', text='トラック番号', command=lambda: sortby(tree, 'Track Number', False))
 
     for file_path, tags in processed_files:
         tree.insert('', tk.END, values=(
-        file_path, tags['track_name'], tags['artist_name'], tags['album_name'], tags['track_number']))
+            file_path, tags['track_name'], tags['artist_name'], tags['album_name'], tags['track_number']))
 
     tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
@@ -143,6 +150,13 @@ def preview_id3_tags(processed_files: List[Tuple[str, ID3Tags]]) -> None:
     frame.rowconfigure(0, weight=1)
     tree.columnconfigure(0, weight=1)
     tree.columnconfigure(1, weight=1)
+
+    # 列の幅を調整
+    tree.column('File Path', width=300)
+    tree.column('Title', width=150)
+    tree.column('Artist', width=100)
+    tree.column('Album', width=100)
+    tree.column('Track Number', width=10)
 
     # 進捗バーを追加
     progress_var = tk.IntVar()
@@ -169,8 +183,36 @@ def preview_id3_tags(processed_files: List[Tuple[str, ID3Tags]]) -> None:
     root.rowconfigure(2, weight=0)
     root.rowconfigure(3, weight=0)
 
+    # Treeviewのセルを部分的にコピー可能にする
+    tree.bind("<Double-1>", on_double_click)
+
     root.mainloop()
 
+def sortby(tree, col, descending):
+    """Treeviewの並べ替えを行う"""
+    data = [(tree.set(child, col), child) for child in tree.get_children('')]
+    data.sort(reverse=descending)
+    for ix, item in enumerate(data):
+        tree.move(item[1], '', ix)
+    tree.heading(col, command=lambda: sortby(tree, col, int(not descending)))
+
+def on_double_click(event):
+    """セルをダブルクリックで部分選択とコピーを可能にする"""
+    item_id = event.widget.identify_row(event.y)
+    column = event.widget.identify_column(event.x)
+    value = event.widget.item(item_id, "values")[int(column[1:]) - 1]
+    show_copy_popup(value)
+
+def show_copy_popup(value):
+    """部分選択とコピーのためのポップアップを表示"""
+    popup = tk.Toplevel()
+    popup.title("部分選択とコピー")
+    text = tk.Text(popup, wrap="word")
+    text.insert("1.0", value)
+    text.pack(expand=True, fill="both")
+    text.bind("<Control-c>", lambda e: popup.clipboard_append(text.selection_get()))
+    close_button = ttk.Button(popup, text="閉じる", command=popup.destroy)
+    close_button.pack()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="MP3ファイルにID3タグを付けるスクリプト")
