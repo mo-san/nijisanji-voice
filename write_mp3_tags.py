@@ -1,4 +1,3 @@
-import os
 import argparse
 from pathlib import Path
 import unicodedata
@@ -71,7 +70,7 @@ def parse_file_name(file_name: str) -> Optional[ID3Tags]:
     )
 
 
-def write_id3_tags(file_path: str, tags: ID3Tags) -> None:
+def write_id3_tags(file_path: Path, tags: ID3Tags) -> None:
     """ID3タグを書き込む"""
     try:
         audio = EasyID3(file_path)
@@ -87,10 +86,10 @@ def write_id3_tags(file_path: str, tags: ID3Tags) -> None:
     print(f"Processed: {file_path}")
 
 
-def process_files(path: str) -> List[Tuple[str, ID3Tags]]:
+def process_files(path: Path, recursive: bool = False) -> list[tuple[Path, ID3Tags]]:
     """ディレクトリ内のファイルにID3タグを書き込む"""
     processed_files = []
-    for file_path in Path(path).rglob('*.mp3'):
+    for file_path in Path(path).rglob("*.mp3") if recursive else Path(path).glob("*.mp3"):
         tags = parse_file_name(file_path.name)
 
         if not tags:
@@ -101,22 +100,8 @@ def process_files(path: str) -> List[Tuple[str, ID3Tags]]:
     return processed_files
 
 
-def preview_id3_tags(processed_files: List[Tuple[str, ID3Tags]]) -> None:
-    """ID3タグのプレビューをGUIで表示する"""
-
-    def execute_writes():
-        for i, (file_path, tags) in enumerate(processed_files, 1):
-            write_id3_tags(file_path, tags)
-            progress_var.set(i)
-            current_file_var.set(f"Processing: {os.path.basename(file_path)}")
-            root.update_idletasks()
-        messagebox.showinfo("完了", "ID3タグの書き込みが完了しました。")
-        root.destroy()
-
-    # GUIのセットアップ
-    root = tk.Tk()
-    root.title("ID3タグプレビュー")
-
+def setup_preview_gui(root, processed_files, execute_writes):
+    """ID3タグのプレビューをGUIで表示するためのセットアップ"""
     frame = ttk.Frame(root, padding=10)
     frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
@@ -186,7 +171,29 @@ def preview_id3_tags(processed_files: List[Tuple[str, ID3Tags]]) -> None:
     # Treeviewのセルを部分的にコピー可能にする
     tree.bind("<Double-1>", on_double_click)
 
+    return progress_var, current_file_var
+
+
+def preview_id3_tags(processed_files: List[Tuple[Path, ID3Tags]]) -> None:
+    """ID3タグのプレビューをGUIで表示する"""
+
+    def execute_writes():
+        for i, (file_path, tags) in enumerate(processed_files, 1):
+            write_id3_tags(file_path, tags)
+            progress_var.set(i)
+            current_file_var.set(f"Processing: {file_path}")
+            root.update_idletasks()
+        messagebox.showinfo("完了", "ID3タグの書き込みが完了しました。")
+        root.destroy()
+
+    # GUIのセットアップ
+    root = tk.Tk()
+    root.title("ID3タグプレビュー")
+
+    progress_var, current_file_var = setup_preview_gui(root, processed_files, execute_writes)
+
     root.mainloop()
+
 
 def sortby(tree, col, descending):
     """Treeviewの並べ替えを行う"""
@@ -196,12 +203,14 @@ def sortby(tree, col, descending):
         tree.move(item[1], '', ix)
     tree.heading(col, command=lambda: sortby(tree, col, int(not descending)))
 
+
 def on_double_click(event):
     """セルをダブルクリックで部分選択とコピーを可能にする"""
     item_id = event.widget.identify_row(event.y)
     column = event.widget.identify_column(event.x)
     value = event.widget.item(item_id, "values")[int(column[1:]) - 1]
     show_copy_popup(value)
+
 
 def show_copy_popup(value):
     """部分選択とコピーのためのポップアップを表示"""
@@ -214,13 +223,16 @@ def show_copy_popup(value):
     close_button = ttk.Button(popup, text="閉じる", command=popup.destroy)
     close_button.pack()
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="MP3ファイルにID3タグを付けるスクリプト")
     parser.add_argument("--directory", type=str, required=True, help="処理するディレクトリのパス")
+    parser.add_argument("--recursive", action="store_true", help="指定するとサブディレクトリを再帰的に処理する")
 
     args = parser.parse_args()
     directory: str = args.directory
+    recursive: bool = args.recursive
 
-    files_to_process = process_files(directory)
+    files_to_process = process_files(Path(directory))
 
     preview_id3_tags(files_to_process)

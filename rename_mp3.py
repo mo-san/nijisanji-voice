@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 import unicodedata
 from typing import Optional, Dict, List, Tuple
@@ -7,9 +6,11 @@ from tkinter import ttk
 from tkinter import messagebox
 import argparse
 
+
 def normalize_file_name(file_name: str) -> str:
     """NFKC正規化を行う"""
     return unicodedata.normalize('NFKC', file_name)
+
 
 def parse_file_name(file_name: str) -> Optional[Dict[str, object]]:
     """ファイル名を解析して必要な情報を抽出する"""
@@ -21,32 +22,40 @@ def parse_file_name(file_name: str) -> Optional[Dict[str, object]]:
                 'Suffix': parts[1],
                 'IsEX': True
             }
-    else:
-        parts = file_name[:-4].split('_')
-        if len(parts) == 2:
-            return {
-                'Character': parts[0],
-                'Suffix': parts[1],
-                'IsEX': False
-            }
-        elif len(parts) == 3 and parts[0] == '01':
-            return {
-                'Character': parts[1],
-                'Suffix': parts[2],
-                'IsEX': False
-            }
+        return None
+
+    parts = file_name[:-4].split('_')
+    if len(parts) == 2:
+        return {
+            'Character': parts[0],
+            'Suffix': parts[1],
+            'IsEX': False
+        }
+    if len(parts) == 3 and parts[0] == '01':
+        return {
+            'Character': parts[1],
+            'Suffix': parts[2],
+            'IsEX': False
+        }
     return None
 
-def generate_new_file_name(character: str, suffix: str, is_ex: bool) -> str:
+
+def generate_new_file_name(parsed_name: Dict[str, object]) -> str:
     """新しいファイル名を生成する"""
+    character = parsed_name['Character']
+    suffix = parsed_name['Suffix']
+    is_ex = parsed_name['IsEX']
+
     number = "02" if is_ex else "01"
     ex_suffix = " EX" if is_ex else ""
     return f"[{suffix}]{character} - {number} {suffix}{ex_suffix}.mp3"
 
-def get_renamed_files(path: str) -> List[Tuple[str, str]]:
+
+def get_renamed_files(directory_path: Path, recursive: bool = False) -> list[tuple[Path, Path]]:
     """リネーム後のファイル名のリストを取得する"""
     renamed_files = []
-    for file_path in Path(path).rglob('*.mp3'):
+
+    for file_path in directory_path.rglob("*.mp3") if recursive else directory_path.glob("*.mp3"):
         normalized_file_name = normalize_file_name(file_path.name)
         parsed_name = parse_file_name(normalized_file_name)
 
@@ -54,10 +63,11 @@ def get_renamed_files(path: str) -> List[Tuple[str, str]]:
             print(f"Skipped: '{file_path}' - does not match expected pattern")
             continue
 
-        new_name = generate_new_file_name(parsed_name['Character'], parsed_name['Suffix'], parsed_name['IsEX'])
+        new_name = generate_new_file_name(parsed_name)
         new_path = file_path.parent / new_name
         renamed_files.append((file_path, new_path))
     return renamed_files
+
 
 def rename_files(path: str, renamed_files: List[Tuple[str, str]], root: tk.Tk) -> None:
     """実際にファイルをリネームする"""
@@ -65,17 +75,13 @@ def rename_files(path: str, renamed_files: List[Tuple[str, str]], root: tk.Tk) -
         old_path = Path(path) / old_name
         new_path = Path(path) / new_name
         old_path.rename(new_path)
+
     messagebox.showinfo("完了", "ファイルのリネームが完了しました。")
     root.destroy()
 
-def preview_renamed_files(path: str) -> None:
-    """リネーム後のファイル名をGUIでプレビューする"""
-    renamed_files = get_renamed_files(path)
 
-    # GUIのセットアップ
-    root = tk.Tk()
-    root.title("ファイル名リネームプレビュー")
-
+def setup_preview_gui(root, directory_path, renamed_files):
+    """リネーム後のファイル名をGUIでプレビューするためのセットアップ"""
     frame = ttk.Frame(root, padding=10)
     frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
@@ -110,7 +116,7 @@ def preview_renamed_files(path: str) -> None:
     button_frame = ttk.Frame(root, padding=10)
     button_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
-    confirm_button = ttk.Button(button_frame, text="リネームを実行", command=lambda: rename_files(path, renamed_files, root))
+    confirm_button = ttk.Button(button_frame, text="リネームを実行", command=lambda: rename_files(directory_path, renamed_files, root))
     confirm_button.grid(row=0, column=0, padx=5, pady=5)
 
     cancel_button = ttk.Button(button_frame, text="キャンセル", command=root.destroy)
@@ -123,7 +129,6 @@ def preview_renamed_files(path: str) -> None:
     # Treeviewのセルを部分的にコピー可能にする
     tree.bind("<Double-1>", on_double_click)
 
-    root.mainloop()
 
 def sortby(tree, col, descending):
     """Treeviewの並べ替えを行う"""
@@ -133,12 +138,14 @@ def sortby(tree, col, descending):
         tree.move(item[1], '', ix)
     tree.heading(col, command=lambda: sortby(tree, col, int(not descending)))
 
+
 def on_double_click(event):
     """セルをダブルクリックで部分選択とコピーを可能にする"""
     item_id = event.widget.identify_row(event.y)
     column = event.widget.identify_column(event.x)
     value = event.widget.item(item_id, "values")[int(column[1:]) - 1]
     show_copy_popup(value)
+
 
 def show_copy_popup(value):
     """部分選択とコピーのためのポップアップを表示"""
@@ -151,11 +158,27 @@ def show_copy_popup(value):
     close_button = ttk.Button(popup, text="閉じる", command=popup.destroy)
     close_button.pack()
 
+
+def preview_renamed_files(directory_path: Path) -> None:
+    """リネーム後のファイル名をGUIでプレビューする"""
+    renamed_files = get_renamed_files(directory_path)
+
+    # GUIのセットアップ
+    root = tk.Tk()
+    root.title("ファイル名リネームプレビュー")
+
+    setup_preview_gui(root, directory_path, renamed_files)
+
+    root.mainloop()
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="ファイル名をリネームするスクリプト")
     parser.add_argument("--directory", type=str, required=True, help="処理するディレクトリのパス")
+    parser.add_argument("--recursive", action="store_true", help="指定するとサブディレクトリを再帰的に処理する")
 
     args = parser.parse_args()
     directory: str = args.directory
+    recursive: bool = args.recursive
 
-    preview_renamed_files(directory)
+    preview_renamed_files(Path(directory))
