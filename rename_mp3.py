@@ -69,21 +69,25 @@ def get_renamed_files(directory_path: Path, recursive: bool = False) -> list[tup
     return renamed_files
 
 
-def rename_files(path: str, renamed_files: List[Tuple[str, str]], root: tk.Tk) -> None:
+def rename_files(path: str, renamed_files: List[Tuple[str, str]], root: tk.Tk, dry_run: bool = False) -> None:
     """実際にファイルをリネームする"""
     for old_name, new_name in renamed_files:
         old_path = Path(path) / old_name
         new_path = Path(path) / new_name
-        old_path.rename(new_path)
+        if dry_run:
+            print(f"Dry-run: Would rename {old_path} to {new_path}")
+        else:
+            old_path.rename(new_path)
 
-    messagebox.showinfo("完了", "ファイルのリネームが完了しました。")
+    if not dry_run:
+        messagebox.showinfo("完了", "ファイルのリネームが完了しました。")
     root.destroy()
 
 
-def setup_preview_gui(root, directory_path, renamed_files):
+def setup_preview_gui(root, directory_path, renamed_files, dry_run):
     """リネーム後のファイル名をGUIでプレビューするためのセットアップ"""
     frame = ttk.Frame(root, padding=10)
-    frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+    frame.grid(row=0, column=0, sticky=tk.W + tk.E + tk.N + tk.S)
 
     # ウィンドウの大きさを1.5倍に設定
     default_width = 800
@@ -99,12 +103,12 @@ def setup_preview_gui(root, directory_path, renamed_files):
     for old_name, new_name in renamed_files:
         tree.insert('', tk.END, values=(old_name, new_name))
 
-    tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+    tree.grid(row=0, column=0, sticky=tk.W + tk.E + tk.N + tk.S)
 
     # スクロールバーを追加
     scrollbar = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=tree.yview)
-    tree.configure(yscroll=scrollbar.set)
-    scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
+    tree.configure(yscrollcommand=scrollbar.set)
+    scrollbar.grid(row=0, column=1, sticky=tk.N + tk.S)
 
     # リサイズ設定
     frame.columnconfigure(0, weight=1)
@@ -114,9 +118,10 @@ def setup_preview_gui(root, directory_path, renamed_files):
 
     # 確認ボタンを追加
     button_frame = ttk.Frame(root, padding=10)
-    button_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+    button_frame.grid(row=1, column=0, sticky=tk.W + tk.E + tk.N + tk.S)
 
-    confirm_button = ttk.Button(button_frame, text="リネームを実行", command=lambda: rename_files(directory_path, renamed_files, root))
+    confirm_button_text = "リネームを実行 (dry-run のため実際には書き込まれません)" if dry_run else "リネームを実行"
+    confirm_button = ttk.Button(button_frame, text=confirm_button_text, command=lambda: rename_files(directory_path, renamed_files, root, dry_run))
     confirm_button.grid(row=0, column=0, padx=5, pady=5)
 
     cancel_button = ttk.Button(button_frame, text="キャンセル", command=root.destroy)
@@ -159,26 +164,32 @@ def show_copy_popup(value):
     close_button.pack()
 
 
-def preview_renamed_files(directory_path: Path) -> None:
+def preview_renamed_files(directory_path: Path, recursive: bool, dry_run: bool) -> None:
     """リネーム後のファイル名をGUIでプレビューする"""
-    renamed_files = get_renamed_files(directory_path)
+    renamed_files = get_renamed_files(directory_path, recursive)
 
     # GUIのセットアップ
     root = tk.Tk()
     root.title("ファイル名リネームプレビュー")
 
-    setup_preview_gui(root, directory_path, renamed_files)
+    setup_preview_gui(root, directory_path, renamed_files, dry_run)
 
     root.mainloop()
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description="ファイル名をリネームするスクリプト")
     parser.add_argument("--directory", type=str, required=True, help="処理するディレクトリのパス")
     parser.add_argument("--recursive", action="store_true", help="指定するとサブディレクトリを再帰的に処理する")
+    parser.add_argument("--dry-run", action="store_true", help="指定すると実際にはリネームせずに処理をシミュレートする")
 
     args = parser.parse_args()
     directory: str = args.directory
     recursive: bool = args.recursive
+    dry_run: bool = args.dry_run
 
-    preview_renamed_files(Path(directory))
+    preview_renamed_files(Path(directory), recursive, dry_run)
+
+
+if __name__ == "__main__":
+    main()
