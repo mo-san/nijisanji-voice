@@ -101,8 +101,12 @@ def parse_file_name(file_name: str) -> Optional[ID3Tags]:
     )
 
 
-def write_id3_tags(file_path: Path, tags: ID3Tags) -> None:
+def write_id3_tags(file_path: Path, tags: ID3Tags, dry_run: bool = False) -> None:
     """ID3タグを書き込む"""
+    if dry_run:
+        print(f"Dry-run: Would process {file_path} with tags {tags}")
+        return
+
     try:
         audio = EasyID3(file_path)
     except ID3NoHeaderError:
@@ -205,12 +209,12 @@ def setup_preview_gui(root, processed_files, execute_writes):
     return progress_var, current_file_var
 
 
-def preview_id3_tags(processed_files: List[Tuple[Path, ID3Tags]]) -> None:
+def preview_id3_tags(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool) -> None:
     """ID3タグのプレビューをGUIで表示する"""
 
     def execute_writes():
         for i, (file_path, tags) in enumerate(processed_files, 1):
-            write_id3_tags(file_path, tags)
+            write_id3_tags(file_path, tags, dry_run)
             progress_var.set(i)
             current_file_var.set(f"Processing: {file_path}")
             root.update_idletasks()
@@ -254,16 +258,16 @@ def show_copy_popup(value):
     close_button = ttk.Button(popup, text="閉じる", command=popup.destroy)
     close_button.pack()
 
-
-if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="MP3ファイルにID3タグを付けるスクリプト")
     parser.add_argument("--directory", type=str, required=True, help="処理するディレクトリのパス")
     parser.add_argument("--recursive", action="store_true", help="指定するとサブディレクトリを再帰的に処理する")
+    parser.add_argument("--dry-run", action="store_true", help="指定すると実際には書き込まずに処理をシミュレートする")
 
     args = parser.parse_args()
     directory: str = args.directory
     recursive: bool = args.recursive
+    dry_run: bool = args.dry_run
 
     files_to_process = process_files(Path(directory), recursive)
 
-    preview_id3_tags(files_to_process)
+    preview_id3_tags(files_to_process, dry_run)
