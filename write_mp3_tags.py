@@ -6,7 +6,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 from mutagen.easyid3 import EasyID3
-from mutagen.id3 import ID3NoHeaderError
+from mutagen.id3._util import ID3NoHeaderError
 
 
 class ID3Tags(TypedDict):
@@ -117,10 +117,10 @@ def write_id3_tags(file_path: Path, tags: ID3Tags) -> None:
     print(f"Processed: {file_path}")
 
 
-def process_files(path: Path, recursive: bool = False) -> list[tuple[Path, ID3Tags]]:
+def process_files(path: Path, is_recursive: bool = False) -> list[tuple[Path, ID3Tags]]:
     """ディレクトリ内のファイルにID3タグを書き込む"""
     processed_files = []
-    for file_path in Path(path).rglob("*.mp3") if recursive else Path(path).glob("*.mp3"):
+    for file_path in Path(path).rglob("*.mp3") if is_recursive else Path(path).glob("*.mp3"):
         tags = parse_file_name(file_path.name)
 
         if not tags:
@@ -134,7 +134,7 @@ def process_files(path: Path, recursive: bool = False) -> list[tuple[Path, ID3Ta
 def setup_preview_gui(root, processed_files, execute_writes):
     """ID3タグのプレビューをGUIで表示するためのセットアップ"""
     frame = ttk.Frame(root, padding=10)
-    frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+    frame.grid(row=0, column=0, sticky=tk.W + tk.E + tk.N + tk.S)
 
     # ウィンドウの大きさを1.5倍に設定
     default_width = 800
@@ -154,12 +154,12 @@ def setup_preview_gui(root, processed_files, execute_writes):
         tree.insert('', tk.END, values=(
             file_path, tags['track_name'], tags['artist_name'], tags['album_name'], tags['track_number']))
 
-    tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+    tree.grid(row=0, column=0, sticky=tk.W + tk.E + tk.N + tk.S)
 
     # スクロールバーを追加
     scrollbar = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=tree.yview)
-    tree.configure(yscroll=scrollbar.set)
-    scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
+    tree.configure(yscrollcommand=scrollbar.set)
+    scrollbar.grid(row=0, column=1, sticky=tk.N + tk.S)
 
     # リサイズ設定
     frame.columnconfigure(0, weight=1)
@@ -177,15 +177,15 @@ def setup_preview_gui(root, processed_files, execute_writes):
     # 進捗バーを追加
     progress_var = tk.IntVar()
     progress_bar = ttk.Progressbar(root, variable=progress_var, maximum=len(processed_files))
-    progress_bar.grid(row=1, column=0, padx=10, pady=10, sticky=(tk.W, tk.E))
+    progress_bar.grid(row=1, column=0, padx=10, pady=10, sticky=tk.W + tk.E)
 
     current_file_var = tk.StringVar()
     current_file_label = ttk.Label(root, textvariable=current_file_var)
-    current_file_label.grid(row=2, column=0, padx=10, pady=5, sticky=(tk.W, tk.E))
+    current_file_label.grid(row=2, column=0, padx=10, pady=5, sticky=tk.W + tk.E)
 
     # ボタンを追加
     button_frame = ttk.Frame(root, padding=10)
-    button_frame.grid(row=3, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+    button_frame.grid(row=3, column=0, sticky=tk.W + tk.E + tk.N + tk.S)
 
     execute_button = ttk.Button(button_frame, text="タグ書き込みを実行", command=execute_writes)
     execute_button.grid(row=0, column=0, padx=5, pady=5)
@@ -264,6 +264,6 @@ if __name__ == "__main__":
     directory: str = args.directory
     recursive: bool = args.recursive
 
-    files_to_process = process_files(Path(directory))
+    files_to_process = process_files(Path(directory), recursive)
 
     preview_id3_tags(files_to_process)
