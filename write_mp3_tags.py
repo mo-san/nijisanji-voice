@@ -22,6 +22,46 @@ def normalize_file_name(file_name: str) -> str:
     return unicodedata.normalize('NFKC', file_name)
 
 
+def extract_track_info(track_part: str, artist_name: str) -> Tuple[int, str]:
+    """
+    トラック番号とトラック名を抽出する
+
+    期待されるトラック名のパターン:
+    番号 タイトル
+    または
+    タイトル
+
+    例:
+    01 ジューンブライド2024ボイス
+    夜更かしボイス EX
+
+    Args:
+        track_part (str): トラック名の部分
+        artist_name (str): アーティスト名
+
+    Returns:
+        Tuple[int, str]: トラック番号とトラック名
+    """
+    track_info = track_part.split(' ', 1)
+
+    if len(track_info) != 2:
+        return 1, f"{track_part} ({artist_name})"
+
+    try:
+        track_number = int(track_info[0])
+        track_name = f"{track_info[1]} ({artist_name})"
+    except ValueError:
+        return 1, f"{track_part} ({artist_name})"
+
+    # EXの処理
+    if track_name.endswith(" EX"):
+        track_name = track_name[:-3] + ") EX"
+    else:
+        track_name += ")"
+
+    return track_number, track_name
+
+
 def parse_file_name(file_name: str) -> Optional[ID3Tags]:
     """
     ファイル名を解析してID3タグの情報を抽出する
@@ -51,16 +91,7 @@ def parse_file_name(file_name: str) -> Optional[ID3Tags]:
     album_name = prefix_part[1:prefix_part.index(']')]
     artist_name = prefix_part[prefix_part.index(']') + 1:]
 
-    track_info = track_part.split(' ', 1)
-    if len(track_info) == 2:
-        try:
-            track_number = int(track_info[0])
-            track_name = track_info[1].replace(" EX", "")
-        except ValueError:
-            return None
-    else:
-        track_number = 1
-        track_name = track_info[0].replace(" EX", "")
+    track_number, track_name = extract_track_info(track_part, artist_name)
 
     return ID3Tags(
         track_name=track_name,
