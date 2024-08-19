@@ -258,6 +258,8 @@ def show_copy_popup(value):
     close_button = ttk.Button(popup, text="閉じる", command=popup.destroy)
     close_button.pack()
 
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="MP3ファイルにID3タグを付けるスクリプト")
     parser.add_argument("--directory", type=str, required=True, help="処理するディレクトリのパス")
     parser.add_argument("--recursive", action="store_true", help="指定するとサブディレクトリを再帰的に処理する")
