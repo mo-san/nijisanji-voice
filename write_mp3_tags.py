@@ -56,8 +56,6 @@ def extract_track_info(track_part: str, artist_name: str) -> Tuple[int, str]:
     # EXの処理
     if track_name.endswith(" EX"):
         track_name = track_name[:-3] + ") EX"
-    else:
-        track_name += ")"
 
     return track_number, track_name
 
@@ -121,10 +119,10 @@ def write_id3_tags(file_path: Path, tags: ID3Tags, dry_run: bool = False) -> Non
     print(f"Processed: {file_path}")
 
 
-def process_files(path: Path, is_recursive: bool = False) -> list[tuple[Path, ID3Tags]]:
+def process_files(path: Path, recursive: bool = False) -> list[tuple[Path, ID3Tags]]:
     """ディレクトリ内のファイルにID3タグを書き込む"""
     processed_files = []
-    for file_path in Path(path).rglob("*.mp3") if is_recursive else Path(path).glob("*.mp3"):
+    for file_path in Path(path).rglob("*.mp3") if recursive else Path(path).glob("*.mp3"):
         tags = parse_file_name(file_path.name)
 
         if not tags:
@@ -135,7 +133,7 @@ def process_files(path: Path, is_recursive: bool = False) -> list[tuple[Path, ID
     return processed_files
 
 
-def setup_preview_gui(root, processed_files, execute_writes):
+def setup_preview_gui(root, processed_files, execute_writes, dry_run):
     """ID3タグのプレビューをGUIで表示するためのセットアップ"""
     frame = ttk.Frame(root, padding=10)
     frame.grid(row=0, column=0, sticky=tk.W + tk.E + tk.N + tk.S)
@@ -191,7 +189,8 @@ def setup_preview_gui(root, processed_files, execute_writes):
     button_frame = ttk.Frame(root, padding=10)
     button_frame.grid(row=3, column=0, sticky=tk.W + tk.E + tk.N + tk.S)
 
-    execute_button = ttk.Button(button_frame, text="タグ書き込みを実行", command=execute_writes)
+    execute_button_text = "タグ書き込みを実行 (dry-run のため実際には書き込まれません)" if dry_run else "タグ書き込みを実行"
+    execute_button = ttk.Button(button_frame, text=execute_button_text, command=execute_writes)
     execute_button.grid(row=0, column=0, padx=5, pady=5)
 
     cancel_button = ttk.Button(button_frame, text="キャンセル", command=root.destroy)
@@ -225,7 +224,7 @@ def preview_id3_tags(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool)
     root = tk.Tk()
     root.title("ID3タグプレビュー")
 
-    progress_var, current_file_var = setup_preview_gui(root, processed_files, execute_writes)
+    progress_var, current_file_var = setup_preview_gui(root, processed_files, execute_writes, dry_run)
 
     root.mainloop()
 
@@ -259,7 +258,7 @@ def show_copy_popup(value):
     close_button.pack()
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description="MP3ファイルにID3タグを付けるスクリプト")
     parser.add_argument("--directory", type=str, required=True, help="処理するディレクトリのパス")
     parser.add_argument("--recursive", action="store_true", help="指定するとサブディレクトリを再帰的に処理する")
@@ -273,3 +272,7 @@ if __name__ == "__main__":
     files_to_process = process_files(Path(directory), recursive)
 
     preview_id3_tags(files_to_process, dry_run)
+
+
+if __name__ == "__main__":
+    main()
