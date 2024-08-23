@@ -49,13 +49,16 @@ def extract_track_info(track_part: str, artist_name: str) -> Tuple[int, str]:
 
     try:
         track_number = int(track_info[0])
-        track_name = f"{track_info[1]} ({artist_name})"
+        track_name = track_info[1]
     except ValueError:
-        return 1, f"{track_part} ({artist_name})"
+        track_number = 1
+        track_name = track_part
 
     # EXの処理
     if track_name.endswith(" EX"):
-        track_name = track_name[:-3] + ") EX"
+        track_name = track_name[:-3] + f" ({artist_name}) EX"
+    else:
+        track_name = f"{track_name} ({artist_name})"
 
     return track_number, track_name
 
