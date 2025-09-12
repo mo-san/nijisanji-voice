@@ -1,31 +1,22 @@
 import argparse
 from pathlib import Path
-import unicodedata
-from typing import Optional, TypedDict, List, Tuple
+from typing import Optional, List, Tuple
 from mutagen.easyid3 import EasyID3
 from mutagen.id3._util import ID3NoHeaderError
 
-# tkinterのインポートを試行し、失敗した場合はCUIモードで動作
-try:
+# 共通モジュールのインポート
+from mp3_utils import ID3Tags, normalize_file_name, is_already_properly_formatted, get_mp3_files, handle_file_parsing_failure
+from gui_utils import GUI_AVAILABLE, sortby, on_double_click, show_copy_popup, setup_window_size, setup_scrollbar_for_tree, setup_button_frame, setup_frame_resize_behavior
+from cli_utils import get_user_confirmation, display_completion_message, display_cui_table_header, display_cui_table_footer, setup_common_argument_parser, print_no_files_message, truncate_text
+
+# tkinterの再インポート（GUIモードで使用）
+if GUI_AVAILABLE:
     import tkinter as tk
     from tkinter import ttk
     from tkinter import messagebox
-    GUI_AVAILABLE = True
-except ImportError:
-    GUI_AVAILABLE = False
 
 
-class ID3Tags(TypedDict):
-    """ID3タグの情報を保持する型定義"""
-    track_name: str
-    artist_name: str
-    album_name: str
-    track_number: int
-
-
-def normalize_file_name(file_name: str) -> str:
-    """NFKC正規化を行う"""
-    return unicodedata.normalize('NFKC', file_name)
+# ID3Tags, normalize_file_name, is_already_properly_formatted は mp3_utils から使用
 
 
 def extract_track_info(track_part: str, artist_name: str) -> Tuple[int, str]:
@@ -131,11 +122,12 @@ def write_id3_tags(file_path: Path, tags: ID3Tags, dry_run: bool = False) -> Non
 def process_files(path: Path, recursive: bool = False) -> list[tuple[Path, ID3Tags]]:
     """ディレクトリ内のファイルにID3タグを書き込む"""
     processed_files = []
-    for file_path in Path(path).rglob("*.mp3") if recursive else Path(path).glob("*.mp3"):
-        tags = parse_file_name(file_path.name)
+    for file_path in get_mp3_files(path, recursive):
+        normalized_file_name = normalize_file_name(file_path.name)
+        tags = parse_file_name(normalized_file_name)
 
         if not tags:
-            print(f"Skipped: {file_path} - does not match expected pattern")
+            handle_file_parsing_failure(file_path, normalized_file_name)
             continue
 
         processed_files.append((file_path, tags))
@@ -147,12 +139,8 @@ def setup_preview_gui(root, processed_files, execute_writes, dry_run):
     frame = ttk.Frame(root, padding=10)
     frame.grid(row=0, column=0, sticky=tk.W + tk.E + tk.N + tk.S)
 
-    # ウィンドウの大きさを1.5倍に設定
-    default_width = 800
-    default_height = 600
-    window_width = int(default_width * 1.5)
-    window_height = int(default_height * 1.5)
-    root.geometry(f"{window_width}x{window_height}")
+    # ウィンドウサイズを設定
+    setup_window_size(root)
 
     tree = ttk.Treeview(frame, columns=('File Path', 'Title', 'Artist', 'Album', 'Track Number'), show='headings')
     tree.heading('File Path', text='ファイルパス', command=lambda: sortby(tree, 'File Path', False))
@@ -168,15 +156,10 @@ def setup_preview_gui(root, processed_files, execute_writes, dry_run):
     tree.grid(row=0, column=0, sticky=tk.W + tk.E + tk.N + tk.S)
 
     # スクロールバーを追加
-    scrollbar = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=tree.yview)
-    tree.configure(yscrollcommand=scrollbar.set)
-    scrollbar.grid(row=0, column=1, sticky=tk.N + tk.S)
+    setup_scrollbar_for_tree(frame, tree)
 
     # リサイズ設定
-    frame.columnconfigure(0, weight=1)
-    frame.rowconfigure(0, weight=1)
-    tree.columnconfigure(0, weight=1)
-    tree.columnconfigure(1, weight=1)
+    setup_frame_resize_behavior(frame, tree)
 
     # 列の幅を調整
     tree.column('File Path', width=300)
@@ -195,15 +178,12 @@ def setup_preview_gui(root, processed_files, execute_writes, dry_run):
     current_file_label.grid(row=2, column=0, padx=10, pady=5, sticky=tk.W + tk.E)
 
     # ボタンを追加
-    button_frame = ttk.Frame(root, padding=10)
-    button_frame.grid(row=3, column=0, sticky=tk.W + tk.E + tk.N + tk.S)
-
     execute_button_text = "タグ書き込みを実行 (dry-run のため実際には書き込まれません)" if dry_run else "タグ書き込みを実行"
-    execute_button = ttk.Button(button_frame, text=execute_button_text, command=execute_writes)
-    execute_button.grid(row=0, column=0, padx=5, pady=5)
-
-    cancel_button = ttk.Button(button_frame, text="キャンセル", command=root.destroy)
-    cancel_button.grid(row=0, column=1, padx=5, pady=5)
+    buttons_config = [
+        (execute_button_text, execute_writes),
+        ("キャンセル", root.destroy)
+    ]
+    setup_button_frame(root, 3, buttons_config)
 
     root.columnconfigure(0, weight=1)
     root.rowconfigure(0, weight=1)
@@ -249,44 +229,16 @@ def preview_id3_tags_gui(processed_files: List[Tuple[Path, ID3Tags]], dry_run: b
     root.mainloop()
 
 
-def sortby(tree, col, descending):
-    """Treeviewの並べ替えを行う"""
-    data = [(tree.set(child, col), child) for child in tree.get_children('')]
-    data.sort(reverse=descending)
-    for ix, item in enumerate(data):
-        tree.move(item[1], '', ix)
-    tree.heading(col, command=lambda: sortby(tree, col, int(not descending)))
-
-
-def on_double_click(event):
-    """セルをダブルクリックで部分選択とコピーを可能にする"""
-    item_id = event.widget.identify_row(event.y)
-    column = event.widget.identify_column(event.x)
-    value = event.widget.item(item_id, "values")[int(column[1:]) - 1]
-    show_copy_popup(value)
-
-
-def show_copy_popup(value):
-    """部分選択とコピーのためのポップアップを表示"""
-    popup = tk.Toplevel()
-    popup.title("部分選択とコピー")
-    text = tk.Text(popup, wrap="word")
-    text.insert("1.0", value)
-    text.pack(expand=True, fill="both")
-    text.bind("<Control-c>", lambda e: popup.clipboard_append(text.selection_get()))
-    close_button = ttk.Button(popup, text="閉じる", command=popup.destroy)
-    close_button.pack()
+# sortby, on_double_click, show_copy_popup は gui_utils から使用
 
 
 def display_cui_table(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool) -> None:
     """CUIでID3タグ情報を表形式で表示する"""
     if not processed_files:
-        print("処理対象のファイルが見つかりませんでした。")
+        print_no_files_message()
         return
 
-    print("\n" + "=" * 120)
-    print("ID3タグ書き込みプレビュー")
-    print("=" * 120)
+    display_cui_table_header("ID3タグ書き込みプレビュー", 120)
 
     # ヘッダー表示
     print(f"{'ファイルパス':<40} {'タイトル':<30} {'アーティスト':<20} {'アルバム':<20} {'トラック':<8}")
@@ -295,15 +247,13 @@ def display_cui_table(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool
     # ファイル一覧表示
     for file_path, tags in processed_files:
         file_name = file_path.name
-        title = tags['track_name'][:28] + "..." if len(tags['track_name']) > 30 else tags['track_name']
-        artist = tags['artist_name'][:18] + "..." if len(tags['artist_name']) > 20 else tags['artist_name']
-        album = tags['album_name'][:18] + "..." if len(tags['album_name']) > 20 else tags['album_name']
+        title = truncate_text(tags['track_name'], 30)
+        artist = truncate_text(tags['artist_name'], 20)
+        album = truncate_text(tags['album_name'], 20)
         track = str(tags['track_number'])
         print(f"{file_name:<40} {title:<30} {artist:<20} {album:<20} {track:<8}")
 
-    print("-" * 120)
-    print(f"合計: {len(processed_files)}ファイル")
-    print("=" * 120)
+    display_cui_table_footer(len(processed_files), 120)
 
 
 def write_tags_cui(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool) -> None:
@@ -311,8 +261,7 @@ def write_tags_cui(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool) -
     for file_path, tags in processed_files:
         write_id3_tags(file_path, tags, dry_run)
     
-    if not dry_run:
-        print("ID3タグの書き込みが完了しました。")
+    display_completion_message(dry_run, "ID3タグの書き込み")
 
 
 def preview_id3_tags_cui(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool) -> None:
@@ -323,29 +272,14 @@ def preview_id3_tags_cui(processed_files: List[Tuple[Path, ID3Tags]], dry_run: b
         return
 
     # ユーザーに確認
-    action_text = (
-        "実行しますか？(dry-run のため実際には書き込まれません)"
-        if dry_run
-        else "ID3タグの書き込みを実行しますか？"
-    )
-    while True:
-        response = input(f"\n{action_text} [y/N]: ").strip().lower()
-        if response in ["y", "yes"]:
-            write_tags_cui(processed_files, dry_run)
-            break
-        elif response in ["n", "no", ""]:
-            print("キャンセルしました。")
-            break
-        else:
-            print("y または n で答えてください。")
+    if get_user_confirmation("ID3タグの書き込み", dry_run):
+        write_tags_cui(processed_files, dry_run)
+    else:
+        print("キャンセルしました。")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="MP3ファイルにID3タグを付けるスクリプト")
-    parser.add_argument("--directory", type=str, required=True, help="処理するディレクトリのパス")
-    parser.add_argument("--recursive", action="store_true", help="指定するとサブディレクトリを再帰的に処理する")
-    parser.add_argument("--dry-run", action="store_true", help="指定すると実際には書き込まずに処理をシミュレートする")
-    parser.add_argument("--cui", action="store_true", help="指定するとGUIではなくCUIモードで実行する")
+    parser = setup_common_argument_parser("MP3ファイルにID3タグを付けるスクリプト")
 
     args = parser.parse_args()
     directory: str = args.directory

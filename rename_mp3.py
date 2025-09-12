@@ -1,46 +1,20 @@
 from pathlib import Path
-import unicodedata
 from typing import Optional, Dict, List, Tuple
 import argparse
-import re
 
-# tkinterのインポートを試行し、失敗した場合はCUIモードで動作
-try:
+# 共通モジュールのインポート
+from mp3_utils import normalize_file_name, is_already_properly_formatted, get_mp3_files, handle_file_parsing_failure
+from gui_utils import GUI_AVAILABLE, sortby, on_double_click, show_copy_popup, setup_window_size, setup_scrollbar_for_tree, setup_button_frame, setup_frame_resize_behavior
+from cli_utils import get_user_confirmation, display_completion_message, display_cui_table_header, display_cui_table_footer, setup_common_argument_parser, print_no_files_message
+
+# tkinterの再インポート（GUIモードで使用）
+if GUI_AVAILABLE:
     import tkinter as tk
     from tkinter import ttk
     from tkinter import messagebox
 
-    GUI_AVAILABLE = True
-except ImportError:
-    GUI_AVAILABLE = False
 
-
-def normalize_file_name(file_name: str) -> str:
-    """NFKC正規化を行う"""
-    return unicodedata.normalize("NFKC", file_name)
-
-
-def is_already_properly_formatted(file_name: str) -> bool:
-    """ファイル名がすでに適切にフォーマットされているかチェックする"""
-    # 目標フォーマット: [アルバム名]アーティスト名 - 01/02 トラック名[ EX].mp3
-    # 通常版: [アルバム名]アーティスト名 - 01 トラック名.mp3
-    # EX版: [アルバム名]アーティスト名 - 02 トラック名 EX.mp3
-
-    # 正規表現パターン
-    pattern = r"^\[([^\]]+)\](.+?) - (01|02) \1( EX)?\.mp3$"
-
-    match = re.match(pattern, file_name)
-    if not match:
-        return False
-
-    album_name, artist_name, number, ex_suffix = match.groups()
-
-    # EX版の場合は番号が02で EX サフィックスが必要
-    if ex_suffix == " EX":
-        return number == "02"
-    # 通常版の場合は番号が01で EX サフィックスがない
-    else:
-        return number == "01"
+# normalize_file_name と is_already_properly_formatted は mp3_utils から使用
 
 
 def parse_file_name(file_name: str) -> Optional[Dict[str, object]]:
@@ -92,18 +66,12 @@ def get_renamed_files(
     """リネーム後のファイル名のリストを取得する"""
     renamed_files = []
 
-    for file_path in (
-        directory_path.rglob("*.mp3") if recursive else directory_path.glob("*.mp3")
-    ):
+    for file_path in get_mp3_files(directory_path, recursive):
         normalized_file_name = normalize_file_name(file_path.name)
         parsed_name = parse_file_name(normalized_file_name)
 
         if not parsed_name:
-            # ファイル名の解析に失敗した場合、すでに適切にフォーマットされているかチェック
-            if is_already_properly_formatted(normalized_file_name):
-                print(f"Already formatted: '{file_path}' - すでにリネーム済み")
-            else:
-                print(f"Skipped: '{file_path}' - does not match expected pattern")
+            handle_file_parsing_failure(file_path, normalized_file_name)
             continue
 
         new_name = generate_new_file_name(parsed_name)
@@ -145,8 +113,7 @@ def rename_files_cui(
         else:
             old_path.rename(new_path)
 
-    if not dry_run:
-        print("ファイルのリネームが完了しました。")
+    display_completion_message(dry_run, "ファイルのリネーム")
 
 
 def setup_preview_gui(root, directory_path, renamed_files, dry_run):
@@ -154,12 +121,8 @@ def setup_preview_gui(root, directory_path, renamed_files, dry_run):
     frame = ttk.Frame(root, padding=10)
     frame.grid(row=0, column=0, sticky=tk.W + tk.E + tk.N + tk.S)
 
-    # ウィンドウの大きさを1.5倍に設定
-    default_width = 800
-    default_height = 600
-    window_width = int(default_width * 1.5)
-    window_height = int(default_height * 1.5)
-    root.geometry(f"{window_width}x{window_height}")
+    # ウィンドウサイズを設定
+    setup_window_size(root)
 
     tree = ttk.Treeview(frame, columns=("Old Name", "New Name"), show="headings")
     tree.heading(
@@ -179,34 +142,22 @@ def setup_preview_gui(root, directory_path, renamed_files, dry_run):
     tree.grid(row=0, column=0, sticky=tk.W + tk.E + tk.N + tk.S)
 
     # スクロールバーを追加
-    scrollbar = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=tree.yview)
-    tree.configure(yscrollcommand=scrollbar.set)
-    scrollbar.grid(row=0, column=1, sticky=tk.N + tk.S)
+    setup_scrollbar_for_tree(frame, tree)
 
     # リサイズ設定
-    frame.columnconfigure(0, weight=1)
-    frame.rowconfigure(0, weight=1)
-    tree.columnconfigure(0, weight=1)
-    tree.columnconfigure(1, weight=1)
+    setup_frame_resize_behavior(frame, tree)
 
-    # 確認ボタンを追加
-    button_frame = ttk.Frame(root, padding=10)
-    button_frame.grid(row=1, column=0, sticky=tk.W + tk.E + tk.N + tk.S)
-
+    # ボタンを追加
     confirm_button_text = (
         "リネームを実行 (dry-run のため実際には書き込まれません)"
         if dry_run
         else "リネームを実行"
     )
-    confirm_button = ttk.Button(
-        button_frame,
-        text=confirm_button_text,
-        command=lambda: rename_files_gui(directory_path, renamed_files, root, dry_run),
-    )
-    confirm_button.grid(row=0, column=0, padx=5, pady=5)
-
-    cancel_button = ttk.Button(button_frame, text="キャンセル", command=root.destroy)
-    cancel_button.grid(row=0, column=1, padx=5, pady=5)
+    buttons_config = [
+        (confirm_button_text, lambda: rename_files_gui(directory_path, renamed_files, root, dry_run)),
+        ("キャンセル", root.destroy)
+    ]
+    setup_button_frame(root, 1, buttons_config)
 
     root.columnconfigure(0, weight=1)
     root.rowconfigure(0, weight=1)
@@ -216,44 +167,16 @@ def setup_preview_gui(root, directory_path, renamed_files, dry_run):
     tree.bind("<Double-1>", on_double_click)
 
 
-def sortby(tree, col, descending):
-    """Treeviewの並べ替えを行う"""
-    data = [(tree.set(child, col), child) for child in tree.get_children("")]
-    data.sort(reverse=descending)
-    for ix, item in enumerate(data):
-        tree.move(item[1], "", ix)
-    tree.heading(col, command=lambda: sortby(tree, col, int(not descending)))
-
-
-def on_double_click(event):
-    """セルをダブルクリックで部分選択とコピーを可能にする"""
-    item_id = event.widget.identify_row(event.y)
-    column = event.widget.identify_column(event.x)
-    value = event.widget.item(item_id, "values")[int(column[1:]) - 1]
-    show_copy_popup(value)
-
-
-def show_copy_popup(value):
-    """部分選択とコピーのためのポップアップを表示"""
-    popup = tk.Toplevel()
-    popup.title("部分選択とコピー")
-    text = tk.Text(popup, wrap="word")
-    text.insert("1.0", value)
-    text.pack(expand=True, fill="both")
-    text.bind("<Control-c>", lambda e: popup.clipboard_append(text.selection_get()))
-    close_button = ttk.Button(popup, text="閉じる", command=popup.destroy)
-    close_button.pack()
+# sortby, on_double_click, show_copy_popup は gui_utils から使用
 
 
 def display_cui_table(renamed_files: List[Tuple[Path, Path]], dry_run: bool) -> None:
     """CUIでリネーム後のファイル名を表形式で表示する"""
     if not renamed_files:
-        print("リネーム対象のファイルが見つかりませんでした。")
+        print_no_files_message("リネーム対象")
         return
 
-    print("\n" + "=" * 80)
-    print("ファイル名リネームプレビュー")
-    print("=" * 80)
+    display_cui_table_header("ファイル名リネームプレビュー")
 
     # ヘッダー表示
     print(f"{'元のファイル名':<40} {'新しいファイル名':<40}")
@@ -265,9 +188,7 @@ def display_cui_table(renamed_files: List[Tuple[Path, Path]], dry_run: bool) -> 
         new_name = new_path.name
         print(f"{old_name:<40} {new_name:<40}")
 
-    print("-" * 80)
-    print(f"合計: {len(renamed_files)}ファイル")
-    print("=" * 80)
+    display_cui_table_footer(len(renamed_files))
 
 
 def preview_renamed_files_cui(
@@ -282,21 +203,10 @@ def preview_renamed_files_cui(
         return
 
     # ユーザーに確認
-    action_text = (
-        "実行しますか？(dry-run のため実際には書き込まれません)"
-        if dry_run
-        else "リネームを実行しますか？"
-    )
-    while True:
-        response = input(f"\n{action_text} [y/N]: ").strip().lower()
-        if response in ["y", "yes"]:
-            rename_files_cui(directory_path, renamed_files, dry_run)
-            break
-        elif response in ["n", "no", ""]:
-            print("キャンセルしました。")
-            break
-        else:
-            print("y または n で答えてください。")
+    if get_user_confirmation("リネーム", dry_run):
+        rename_files_cui(directory_path, renamed_files, dry_run)
+    else:
+        print("キャンセルしました。")
 
 
 def preview_renamed_files(directory_path: Path, recursive: bool, dry_run: bool) -> None:
@@ -315,23 +225,7 @@ def preview_renamed_files(directory_path: Path, recursive: bool, dry_run: bool) 
 
 
 def main():
-    parser = argparse.ArgumentParser(description="ファイル名をリネームするスクリプト")
-    parser.add_argument(
-        "--directory", type=str, required=True, help="処理するディレクトリのパス"
-    )
-    parser.add_argument(
-        "--recursive",
-        action="store_true",
-        help="指定するとサブディレクトリを再帰的に処理する",
-    )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="指定すると実際にはリネームせずに処理をシミュレートする",
-    )
-    parser.add_argument(
-        "--cui", action="store_true", help="指定するとGUIではなくCUIモードで実行する"
-    )
+    parser = setup_common_argument_parser("ファイル名をリネームするスクリプト")
 
     args = parser.parse_args()
     directory: str = args.directory
