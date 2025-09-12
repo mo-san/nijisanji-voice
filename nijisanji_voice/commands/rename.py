@@ -54,12 +54,13 @@ def parse_file_name(file_name: str) -> Optional[Dict[str, object]]:
             "Suffix": parts[1],  # アルバム名/トラック名
             "IsEX": False,
         }
-    # 01_アーティスト名_アルバム名/トラック名.mp3 形式
-    if len(parts) == 3 and parts[0] == "01":
+    # 01_アーティスト名_アルバム名/トラック名.mp3 形式 (track numbers 01-06)
+    if len(parts) == 3 and parts[0].isdigit() and parts[0] in ["01", "02", "03", "04", "05", "06"]:
         return {
             "Character": parts[1],  # アーティスト名
             "Suffix": parts[2],  # アルバム名/トラック名
             "IsEX": False,
+            "TrackNumber": parts[0],  # トラック番号
         }
     return None
 
@@ -71,7 +72,12 @@ def generate_new_file_name(parsed_name: Dict[str, object]) -> str:
     suffix = parsed_name["Suffix"]  # アルバム名/トラック名
     is_ex = parsed_name["IsEX"]
 
-    number = "02" if is_ex else "01"
+    # TrackNumberが指定されている場合はそれを使用、EXの場合は02、それ以外は01
+    if "TrackNumber" in parsed_name:
+        number = parsed_name["TrackNumber"]
+    else:
+        number = "02" if is_ex else "01"
+    
     ex_suffix = " EX" if is_ex else ""
     return f"[{suffix}]{character} - {number} {suffix}{ex_suffix}.mp3"
 
