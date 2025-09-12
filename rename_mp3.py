@@ -2,6 +2,7 @@ from pathlib import Path
 import unicodedata
 from typing import Optional, Dict, List, Tuple
 import argparse
+import re
 
 # tkinterのインポートを試行し、失敗した場合はCUIモードで動作
 try:
@@ -18,29 +19,55 @@ def normalize_file_name(file_name: str) -> str:
     return unicodedata.normalize('NFKC', file_name)
 
 
+def is_already_properly_formatted(file_name: str) -> bool:
+    """ファイル名がすでに適切にフォーマットされているかチェックする"""
+    # 目標フォーマット: [アルバム名]アーティスト名 - 01/02 トラック名[ EX].mp3
+    # 通常版: [アルバム名]アーティスト名 - 01 トラック名.mp3
+    # EX版: [アルバム名]アーティスト名 - 02 トラック名 EX.mp3
+
+    # 正規表現パターン
+    pattern = r'^\[([^\]]+)\](.+?) - (01|02) \1( EX)?\.mp3$'
+
+    match = re.match(pattern, file_name)
+    if not match:
+        return False
+
+    album_name, artist_name, number, ex_suffix = match.groups()
+
+    # EX版の場合は番号が02で EX サフィックスが必要
+    if ex_suffix == ' EX':
+        return number == '02'
+    # 通常版の場合は番号が01で EX サフィックスがない
+    else:
+        return number == '01'
+
+
 def parse_file_name(file_name: str) -> Optional[Dict[str, object]]:
     """ファイル名を解析して必要な情報を抽出する"""
+    # EX_アーティスト名_アルバム名/トラック名.mp3 形式
     if file_name.startswith('EX_'):
         parts = file_name[3:-4].split('_')
         if len(parts) == 2:
             return {
-                'Character': parts[0],
-                'Suffix': parts[1],
+                'Character': parts[0],  # アーティスト名
+                'Suffix': parts[1],     # アルバム名/トラック名
                 'IsEX': True
             }
         return None
 
     parts = file_name[:-4].split('_')
+    # アーティスト名_アルバム名/トラック名.mp3 形式
     if len(parts) == 2:
         return {
-            'Character': parts[0],
-            'Suffix': parts[1],
+            'Character': parts[0],  # アーティスト名
+            'Suffix': parts[1],     # アルバム名/トラック名
             'IsEX': False
         }
+    # 01_アーティスト名_アルバム名/トラック名.mp3 形式
     if len(parts) == 3 and parts[0] == '01':
         return {
-            'Character': parts[1],
-            'Suffix': parts[2],
+            'Character': parts[1],  # アーティスト名
+            'Suffix': parts[2],     # アルバム名/トラック名
             'IsEX': False
         }
     return None
@@ -48,8 +75,9 @@ def parse_file_name(file_name: str) -> Optional[Dict[str, object]]:
 
 def generate_new_file_name(parsed_name: Dict[str, object]) -> str:
     """新しいファイル名を生成する"""
-    character = parsed_name['Character']
-    suffix = parsed_name['Suffix']
+    # Character = アーティスト名, Suffix = アルバム名/トラック名として扱う
+    character = parsed_name['Character']  # アーティスト名
+    suffix = parsed_name['Suffix']        # アルバム名/トラック名
     is_ex = parsed_name['IsEX']
 
     number = "02" if is_ex else "01"
@@ -66,11 +94,21 @@ def get_renamed_files(directory_path: Path, recursive: bool = False) -> list[tup
         parsed_name = parse_file_name(normalized_file_name)
 
         if not parsed_name:
-            print(f"Skipped: '{file_path}' - does not match expected pattern")
+            # ファイル名の解析に失敗した場合、すでに適切にフォーマットされているかチェック
+            if is_already_properly_formatted(normalized_file_name):
+                print(f"Already formatted: '{file_path}' - すでにリネーム済み")
+            else:
+                print(f"Skipped: '{file_path}' - does not match expected pattern")
             continue
 
         new_name = generate_new_file_name(parsed_name)
         new_path = file_path.parent / new_name
+
+        # 新しいファイル名が現在のファイル名と同じ場合もすでにリネーム済みとして扱う
+        if new_path.name == file_path.name:
+            print(f"Already formatted: '{file_path}' - すでにリネーム済み")
+            continue
+
         renamed_files.append((file_path, new_path))
     return renamed_files
 
