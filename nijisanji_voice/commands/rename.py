@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple
-from cli_utils import (
+
+from ..lib.cli_utils import (
     get_user_confirmation,
     display_completion_message,
     display_cui_table_header,
@@ -8,7 +9,7 @@ from cli_utils import (
     setup_common_argument_parser,
     print_no_files_message,
 )
-from gui_utils import (
+from ..lib.gui_utils import (
     GUI_AVAILABLE,
     sortby,
     on_double_click,
@@ -19,7 +20,7 @@ from gui_utils import (
 )
 
 # 共通モジュールのインポート
-from mp3_utils import (
+from ..lib.mp3_utils import (
     normalize_file_name,
     get_mp3_files,
     handle_file_parsing_failure,
@@ -30,9 +31,6 @@ if GUI_AVAILABLE:
     import tkinter as tk
     from tkinter import ttk
     from tkinter import messagebox
-
-
-# normalize_file_name と is_already_properly_formatted は mp3_utils から使用
 
 
 def parse_file_name(file_name: str) -> Optional[Dict[str, object]]:
@@ -78,9 +76,7 @@ def generate_new_file_name(parsed_name: Dict[str, object]) -> str:
     return f"[{suffix}]{character} - {number} {suffix}{ex_suffix}.mp3"
 
 
-def get_renamed_files(
-    directory_path: Path, recursive: bool = False
-) -> list[tuple[Path, Path]]:
+def get_renamed_files(directory_path: Path, recursive: bool = False) -> list[tuple[Path, Path]]:
     """リネーム後のファイル名のリストを取得する"""
     renamed_files = []
 
@@ -167,9 +163,7 @@ def setup_preview_gui(root, directory_path, renamed_files, dry_run):
 
     # ボタンを追加
     confirm_button_text = (
-        "リネームを実行 (dry-run のため実際には書き込まれません)"
-        if dry_run
-        else "リネームを実行"
+        "リネームを実行 (dry-run のため実際には書き込まれません)" if dry_run else "リネームを実行"
     )
     buttons_config = [
         (
@@ -186,9 +180,6 @@ def setup_preview_gui(root, directory_path, renamed_files, dry_run):
 
     # Treeviewのセルを部分的にコピー可能にする
     tree.bind("<Double-1>", on_double_click)
-
-
-# sortby, on_double_click, show_copy_popup は gui_utils から使用
 
 
 def display_cui_table(renamed_files: List[Tuple[Path, Path]], dry_run: bool) -> None:
@@ -212,9 +203,7 @@ def display_cui_table(renamed_files: List[Tuple[Path, Path]], dry_run: bool) -> 
     display_cui_table_footer(len(renamed_files))
 
 
-def preview_renamed_files_cui(
-    directory_path: Path, recursive: bool, dry_run: bool
-) -> None:
+def preview_renamed_files_cui(directory_path: Path, recursive: bool, dry_run: bool) -> None:
     """CUIモードでリネーム後のファイル名をプレビューする"""
     renamed_files = get_renamed_files(directory_path, recursive)
 

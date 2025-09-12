@@ -1,9 +1,37 @@
 [project]
 name = "nijisanji-voice"
 version = "0.1.0"
-description = "Add your description here"
+description = "にじさんじボイスファイル管理ツール - MP3ファイルのリネームとID3タグ書き込み"
+readme = "README.md"
 requires-python = ">=3.9"
+authors = [
+    {name = "nijisanji-voice project"}
+]
+keywords = ["nijisanji", "mp3", "id3", "tag", "rename"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Utilities",
+]
 dependencies = [
     "black>=25.1.0",
     "mutagen>=1.47.0",
+]
+
+[project.scripts]
+nijisanji-voice = "nijisanji_voice.main:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "mypy>=1.0.0",
+    "ruff>=0.1.0",
 ]

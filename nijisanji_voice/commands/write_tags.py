@@ -2,7 +2,8 @@ from pathlib import Path
 from typing import Optional, List, Tuple
 from mutagen.easyid3 import EasyID3
 from mutagen.id3._util import ID3NoHeaderError
-from cli_utils import (
+
+from ..lib.cli_utils import (
     get_user_confirmation,
     display_completion_message,
     display_cui_table_header,
@@ -11,7 +12,8 @@ from cli_utils import (
     print_no_files_message,
     truncate_text,
 )
-from gui_utils import (
+
+from ..lib.gui_utils import (
     GUI_AVAILABLE,
     sortby,
     on_double_click,
@@ -22,7 +24,7 @@ from gui_utils import (
 )
 
 # 共通モジュールのインポート
-from mp3_utils import (
+from ..lib.mp3_utils import (
     ID3Tags,
     normalize_file_name,
     get_mp3_files,
@@ -34,9 +36,6 @@ if GUI_AVAILABLE:
     import tkinter as tk
     from tkinter import ttk
     from tkinter import messagebox
-
-
-# ID3Tags, normalize_file_name, is_already_properly_formatted は mp3_utils から使用
 
 
 def extract_track_info(track_part: str, artist_name: str) -> Tuple[int, str]:
@@ -173,9 +172,7 @@ def setup_preview_gui(root, processed_files, execute_writes, dry_run):
         command=lambda: sortby(tree, "File Path", False),
     )
     tree.heading("Title", text="タイトル", command=lambda: sortby(tree, "Title", False))
-    tree.heading(
-        "Artist", text="アーティスト", command=lambda: sortby(tree, "Artist", False)
-    )
+    tree.heading("Artist", text="アーティスト", command=lambda: sortby(tree, "Artist", False))
     tree.heading("Album", text="アルバム", command=lambda: sortby(tree, "Album", False))
     tree.heading(
         "Track Number",
@@ -213,9 +210,7 @@ def setup_preview_gui(root, processed_files, execute_writes, dry_run):
 
     # 進捗バーを追加
     progress_var = tk.IntVar()
-    progress_bar = ttk.Progressbar(
-        root, variable=progress_var, maximum=len(processed_files)
-    )
+    progress_bar = ttk.Progressbar(root, variable=progress_var, maximum=len(processed_files))
     progress_bar.grid(row=1, column=0, padx=10, pady=10, sticky=tk.W + tk.E)
 
     current_file_var = tk.StringVar()
@@ -246,9 +241,7 @@ def setup_preview_gui(root, processed_files, execute_writes, dry_run):
     return progress_var, current_file_var
 
 
-def preview_id3_tags(
-    processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool
-) -> None:
+def preview_id3_tags(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool) -> None:
     """ID3タグのプレビューを表示する（GUI/CUI自動切り替え）"""
     if GUI_AVAILABLE:
         # GUIモード
@@ -259,9 +252,7 @@ def preview_id3_tags(
         preview_id3_tags_cui(processed_files, dry_run)
 
 
-def preview_id3_tags_gui(
-    processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool
-) -> None:
+def preview_id3_tags_gui(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool) -> None:
     """ID3タグのプレビューをGUIで表示する"""
 
     def execute_writes():
@@ -284,12 +275,7 @@ def preview_id3_tags_gui(
     root.mainloop()
 
 
-# sortby, on_double_click, show_copy_popup は gui_utils から使用
-
-
-def display_cui_table(
-    processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool
-) -> None:
+def display_cui_table(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool) -> None:
     """CUIでID3タグ情報を表形式で表示する"""
     if not processed_files:
         print_no_files_message()
@@ -323,9 +309,7 @@ def write_tags_cui(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool) -
     display_completion_message(dry_run, "ID3タグの書き込み")
 
 
-def preview_id3_tags_cui(
-    processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool
-) -> None:
+def preview_id3_tags_cui(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool) -> None:
     """CUIモードでID3タグのプレビューを表示する"""
     display_cui_table(processed_files, dry_run)
 
