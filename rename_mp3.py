@@ -1,11 +1,29 @@
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple
-import argparse
+from cli_utils import (
+    get_user_confirmation,
+    display_completion_message,
+    display_cui_table_header,
+    display_cui_table_footer,
+    setup_common_argument_parser,
+    print_no_files_message,
+)
+from gui_utils import (
+    GUI_AVAILABLE,
+    sortby,
+    on_double_click,
+    setup_window_size,
+    setup_scrollbar_for_tree,
+    setup_button_frame,
+    setup_frame_resize_behavior,
+)
 
 # 共通モジュールのインポート
-from mp3_utils import normalize_file_name, is_already_properly_formatted, get_mp3_files, handle_file_parsing_failure
-from gui_utils import GUI_AVAILABLE, sortby, on_double_click, show_copy_popup, setup_window_size, setup_scrollbar_for_tree, setup_button_frame, setup_frame_resize_behavior
-from cli_utils import get_user_confirmation, display_completion_message, display_cui_table_header, display_cui_table_footer, setup_common_argument_parser, print_no_files_message
+from mp3_utils import (
+    normalize_file_name,
+    get_mp3_files,
+    handle_file_parsing_failure,
+)
 
 # tkinterの再インポート（GUIモードで使用）
 if GUI_AVAILABLE:
@@ -154,8 +172,11 @@ def setup_preview_gui(root, directory_path, renamed_files, dry_run):
         else "リネームを実行"
     )
     buttons_config = [
-        (confirm_button_text, lambda: rename_files_gui(directory_path, renamed_files, root, dry_run)),
-        ("キャンセル", root.destroy)
+        (
+            confirm_button_text,
+            lambda: rename_files_gui(directory_path, renamed_files, root, dry_run),
+        ),
+        ("キャンセル", root.destroy),
     ]
     setup_button_frame(root, 1, buttons_config)
 

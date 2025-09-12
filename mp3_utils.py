@@ -4,14 +4,16 @@ MP3ファイル処理用の共通ユーティリティ関数とデータ型定�
 このモジュールは rename_mp3.py と write_mp3_tags.py で共通して使用される
 ファイル名処理や型定義を提供します。
 """
-import unicodedata
+
 import re
-from typing import Optional, Dict, TypedDict
+import unicodedata
 from pathlib import Path
+from typing import TypedDict
 
 
 class ID3Tags(TypedDict):
     """ID3タグの情報を保持する型定義"""
+
     track_name: str
     artist_name: str
     album_name: str

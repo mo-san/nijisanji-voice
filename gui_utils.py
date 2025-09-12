@@ -10,6 +10,7 @@ try:
     import tkinter as tk
     from tkinter import ttk
     from tkinter import messagebox
+
     GUI_AVAILABLE = True
 except ImportError:
     GUI_AVAILABLE = False
@@ -64,22 +65,22 @@ def setup_scrollbar_for_tree(frame, tree):
 def setup_button_frame(root, row, buttons_config):
     """
     ボタンフレームを設定する
-    
+
     Args:
         root: 親ウィンドウ
         row: 配置する行
         buttons_config: [(text, command), ...] のリスト
-    
+
     Returns:
         作成されたボタンフレーム
     """
     button_frame = ttk.Frame(root, padding=10)
     button_frame.grid(row=row, column=0, sticky=tk.W + tk.E + tk.N + tk.S)
-    
+
     for i, (text, command) in enumerate(buttons_config):
         button = ttk.Button(button_frame, text=text, command=command)
         button.grid(row=0, column=i, padx=5, pady=5)
-    
+
     return button_frame
 
 

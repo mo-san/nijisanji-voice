@@ -1,13 +1,33 @@
-import argparse
 from pathlib import Path
 from typing import Optional, List, Tuple
 from mutagen.easyid3 import EasyID3
 from mutagen.id3._util import ID3NoHeaderError
+from cli_utils import (
+    get_user_confirmation,
+    display_completion_message,
+    display_cui_table_header,
+    display_cui_table_footer,
+    setup_common_argument_parser,
+    print_no_files_message,
+    truncate_text,
+)
+from gui_utils import (
+    GUI_AVAILABLE,
+    sortby,
+    on_double_click,
+    setup_window_size,
+    setup_scrollbar_for_tree,
+    setup_button_frame,
+    setup_frame_resize_behavior,
+)
 
 # 共通モジュールのインポート
-from mp3_utils import ID3Tags, normalize_file_name, is_already_properly_formatted, get_mp3_files, handle_file_parsing_failure
-from gui_utils import GUI_AVAILABLE, sortby, on_double_click, show_copy_popup, setup_window_size, setup_scrollbar_for_tree, setup_button_frame, setup_frame_resize_behavior
-from cli_utils import get_user_confirmation, display_completion_message, display_cui_table_header, display_cui_table_footer, setup_common_argument_parser, print_no_files_message, truncate_text
+from mp3_utils import (
+    ID3Tags,
+    normalize_file_name,
+    get_mp3_files,
+    handle_file_parsing_failure,
+)
 
 # tkinterの再インポート（GUIモードで使用）
 if GUI_AVAILABLE:
@@ -39,7 +59,7 @@ def extract_track_info(track_part: str, artist_name: str) -> Tuple[int, str]:
     Returns:
         Tuple[int, str]: トラック番号とトラック名
     """
-    track_info = track_part.split(' ', 1)
+    track_info = track_part.split(" ", 1)
 
     if len(track_info) != 2:
         return 1, f"{track_part} ({artist_name})"
@@ -74,20 +94,20 @@ def parse_file_name(file_name: str) -> Optional[ID3Tags]:
     [夜更かしボイス]五十嵐梨花 - 02 夜更かしボイス EX.mp3
     [お忍びボイス]天宮こころ - お忍びボイス.mp3
     """
-    if not file_name.endswith('.mp3'):
+    if not file_name.endswith(".mp3"):
         return None
 
     base_name = file_name[:-4]
-    parts = base_name.split(' - ')
+    parts = base_name.split(" - ")
     if len(parts) != 2:
         return None
 
     prefix_part, track_part = parts
-    if not prefix_part.startswith('[') or ']' not in prefix_part:
+    if not prefix_part.startswith("[") or "]" not in prefix_part:
         return None
 
-    album_name = prefix_part[1:prefix_part.index(']')]
-    artist_name = prefix_part[prefix_part.index(']') + 1:]
+    album_name = prefix_part[1 : prefix_part.index("]")]
+    artist_name = prefix_part[prefix_part.index("]") + 1 :]
 
     track_number, track_name = extract_track_info(track_part, artist_name)
 
@@ -95,7 +115,7 @@ def parse_file_name(file_name: str) -> Optional[ID3Tags]:
         track_name=track_name,
         artist_name=artist_name,
         album_name=album_name,
-        track_number=track_number
+        track_number=track_number,
     )
 
 
@@ -111,10 +131,10 @@ def write_id3_tags(file_path: Path, tags: ID3Tags, dry_run: bool = False) -> Non
         audio = EasyID3()
         audio.save(file_path)
 
-    audio['title'] = tags['track_name']
-    audio['artist'] = tags['artist_name']
-    audio['album'] = tags['album_name']
-    audio['tracknumber'] = str(tags['track_number'])
+    audio["title"] = tags["track_name"]
+    audio["artist"] = tags["artist_name"]
+    audio["album"] = tags["album_name"]
+    audio["tracknumber"] = str(tags["track_number"])
     audio.save(file_path)
     print(f"Processed: {file_path}")
 
@@ -142,16 +162,39 @@ def setup_preview_gui(root, processed_files, execute_writes, dry_run):
     # ウィンドウサイズを設定
     setup_window_size(root)
 
-    tree = ttk.Treeview(frame, columns=('File Path', 'Title', 'Artist', 'Album', 'Track Number'), show='headings')
-    tree.heading('File Path', text='ファイルパス', command=lambda: sortby(tree, 'File Path', False))
-    tree.heading('Title', text='タイトル', command=lambda: sortby(tree, 'Title', False))
-    tree.heading('Artist', text='アーティスト', command=lambda: sortby(tree, 'Artist', False))
-    tree.heading('Album', text='アルバム', command=lambda: sortby(tree, 'Album', False))
-    tree.heading('Track Number', text='トラック番号', command=lambda: sortby(tree, 'Track Number', False))
+    tree = ttk.Treeview(
+        frame,
+        columns=("File Path", "Title", "Artist", "Album", "Track Number"),
+        show="headings",
+    )
+    tree.heading(
+        "File Path",
+        text="ファイルパス",
+        command=lambda: sortby(tree, "File Path", False),
+    )
+    tree.heading("Title", text="タイトル", command=lambda: sortby(tree, "Title", False))
+    tree.heading(
+        "Artist", text="アーティスト", command=lambda: sortby(tree, "Artist", False)
+    )
+    tree.heading("Album", text="アルバム", command=lambda: sortby(tree, "Album", False))
+    tree.heading(
+        "Track Number",
+        text="トラック番号",
+        command=lambda: sortby(tree, "Track Number", False),
+    )
 
     for file_path, tags in processed_files:
-        tree.insert('', tk.END, values=(
-            file_path, tags['track_name'], tags['artist_name'], tags['album_name'], tags['track_number']))
+        tree.insert(
+            "",
+            tk.END,
+            values=(
+                file_path,
+                tags["track_name"],
+                tags["artist_name"],
+                tags["album_name"],
+                tags["track_number"],
+            ),
+        )
 
     tree.grid(row=0, column=0, sticky=tk.W + tk.E + tk.N + tk.S)
 
@@ -162,15 +205,17 @@ def setup_preview_gui(root, processed_files, execute_writes, dry_run):
     setup_frame_resize_behavior(frame, tree)
 
     # 列の幅を調整
-    tree.column('File Path', width=300)
-    tree.column('Title', width=150)
-    tree.column('Artist', width=100)
-    tree.column('Album', width=100)
-    tree.column('Track Number', width=10)
+    tree.column("File Path", width=300)
+    tree.column("Title", width=150)
+    tree.column("Artist", width=100)
+    tree.column("Album", width=100)
+    tree.column("Track Number", width=10)
 
     # 進捗バーを追加
     progress_var = tk.IntVar()
-    progress_bar = ttk.Progressbar(root, variable=progress_var, maximum=len(processed_files))
+    progress_bar = ttk.Progressbar(
+        root, variable=progress_var, maximum=len(processed_files)
+    )
     progress_bar.grid(row=1, column=0, padx=10, pady=10, sticky=tk.W + tk.E)
 
     current_file_var = tk.StringVar()
@@ -178,10 +223,14 @@ def setup_preview_gui(root, processed_files, execute_writes, dry_run):
     current_file_label.grid(row=2, column=0, padx=10, pady=5, sticky=tk.W + tk.E)
 
     # ボタンを追加
-    execute_button_text = "タグ書き込みを実行 (dry-run のため実際には書き込まれません)" if dry_run else "タグ書き込みを実行"
+    execute_button_text = (
+        "タグ書き込みを実行 (dry-run のため実際には書き込まれません)"
+        if dry_run
+        else "タグ書き込みを実行"
+    )
     buttons_config = [
         (execute_button_text, execute_writes),
-        ("キャンセル", root.destroy)
+        ("キャンセル", root.destroy),
     ]
     setup_button_frame(root, 3, buttons_config)
 
@@ -197,7 +246,9 @@ def setup_preview_gui(root, processed_files, execute_writes, dry_run):
     return progress_var, current_file_var
 
 
-def preview_id3_tags(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool) -> None:
+def preview_id3_tags(
+    processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool
+) -> None:
     """ID3タグのプレビューを表示する（GUI/CUI自動切り替え）"""
     if GUI_AVAILABLE:
         # GUIモード
@@ -208,7 +259,9 @@ def preview_id3_tags(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool)
         preview_id3_tags_cui(processed_files, dry_run)
 
 
-def preview_id3_tags_gui(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool) -> None:
+def preview_id3_tags_gui(
+    processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool
+) -> None:
     """ID3タグのプレビューをGUIで表示する"""
 
     def execute_writes():
@@ -224,7 +277,9 @@ def preview_id3_tags_gui(processed_files: List[Tuple[Path, ID3Tags]], dry_run: b
     root = tk.Tk()
     root.title("ID3タグプレビュー")
 
-    progress_var, current_file_var = setup_preview_gui(root, processed_files, execute_writes, dry_run)
+    progress_var, current_file_var = setup_preview_gui(
+        root, processed_files, execute_writes, dry_run
+    )
 
     root.mainloop()
 
@@ -232,7 +287,9 @@ def preview_id3_tags_gui(processed_files: List[Tuple[Path, ID3Tags]], dry_run: b
 # sortby, on_double_click, show_copy_popup は gui_utils から使用
 
 
-def display_cui_table(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool) -> None:
+def display_cui_table(
+    processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool
+) -> None:
     """CUIでID3タグ情報を表形式で表示する"""
     if not processed_files:
         print_no_files_message()
@@ -241,16 +298,18 @@ def display_cui_table(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool
     display_cui_table_header("ID3タグ書き込みプレビュー", 120)
 
     # ヘッダー表示
-    print(f"{'ファイルパス':<40} {'タイトル':<30} {'アーティスト':<20} {'アルバム':<20} {'トラック':<8}")
+    print(
+        f"{'ファイルパス':<40} {'タイトル':<30} {'アーティスト':<20} {'アルバム':<20} {'トラック':<8}"
+    )
     print("-" * 120)
 
     # ファイル一覧表示
     for file_path, tags in processed_files:
         file_name = file_path.name
-        title = truncate_text(tags['track_name'], 30)
-        artist = truncate_text(tags['artist_name'], 20)
-        album = truncate_text(tags['album_name'], 20)
-        track = str(tags['track_number'])
+        title = truncate_text(tags["track_name"], 30)
+        artist = truncate_text(tags["artist_name"], 20)
+        album = truncate_text(tags["album_name"], 20)
+        track = str(tags["track_number"])
         print(f"{file_name:<40} {title:<30} {artist:<20} {album:<20} {track:<8}")
 
     display_cui_table_footer(len(processed_files), 120)
@@ -260,11 +319,13 @@ def write_tags_cui(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool) -
     """CUIモードでID3タグを書き込む"""
     for file_path, tags in processed_files:
         write_id3_tags(file_path, tags, dry_run)
-    
+
     display_completion_message(dry_run, "ID3タグの書き込み")
 
 
-def preview_id3_tags_cui(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool) -> None:
+def preview_id3_tags_cui(
+    processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool
+) -> None:
     """CUIモードでID3タグのプレビューを表示する"""
     display_cui_table(processed_files, dry_run)
 
