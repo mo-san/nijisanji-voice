@@ -1,10 +1,16 @@
 from pathlib import Path
 import unicodedata
 from typing import Optional, Dict, List, Tuple
-import tkinter as tk
-from tkinter import ttk
-from tkinter import messagebox
 import argparse
+
+# tkinterのインポートを試行し、失敗した場合はCUIモードで動作
+try:
+    import tkinter as tk
+    from tkinter import ttk
+    from tkinter import messagebox
+    GUI_AVAILABLE = True
+except ImportError:
+    GUI_AVAILABLE = False
 
 
 def normalize_file_name(file_name: str) -> str:
@@ -69,8 +75,8 @@ def get_renamed_files(directory_path: Path, recursive: bool = False) -> list[tup
     return renamed_files
 
 
-def rename_files(path: str, renamed_files: List[Tuple[str, str]], root: tk.Tk, dry_run: bool = False) -> None:
-    """実際にファイルをリネームする"""
+def rename_files_gui(path: str, renamed_files: List[Tuple[str, str]], root, dry_run: bool = False) -> None:
+    """GUIモードでファイルをリネームする"""
     for old_name, new_name in renamed_files:
         old_path = Path(path) / old_name
         new_path = Path(path) / new_name
@@ -82,6 +88,18 @@ def rename_files(path: str, renamed_files: List[Tuple[str, str]], root: tk.Tk, d
     if not dry_run:
         messagebox.showinfo("完了", "ファイルのリネームが完了しました。")
     root.destroy()
+
+
+def rename_files_cui(directory_path: Path, renamed_files: List[Tuple[Path, Path]], dry_run: bool = False) -> None:
+    """CUIモードでファイルをリネームする"""
+    for old_path, new_path in renamed_files:
+        if dry_run:
+            print(f"Dry-run: Would rename {old_path} to {new_path}")
+        else:
+            old_path.rename(new_path)
+
+    if not dry_run:
+        print("ファイルのリネームが完了しました。")
 
 
 def setup_preview_gui(root, directory_path, renamed_files, dry_run):
@@ -121,7 +139,7 @@ def setup_preview_gui(root, directory_path, renamed_files, dry_run):
     button_frame.grid(row=1, column=0, sticky=tk.W + tk.E + tk.N + tk.S)
 
     confirm_button_text = "リネームを実行 (dry-run のため実際には書き込まれません)" if dry_run else "リネームを実行"
-    confirm_button = ttk.Button(button_frame, text=confirm_button_text, command=lambda: rename_files(directory_path, renamed_files, root, dry_run))
+    confirm_button = ttk.Button(button_frame, text=confirm_button_text, command=lambda: rename_files_gui(directory_path, renamed_files, root, dry_run))
     confirm_button.grid(row=0, column=0, padx=5, pady=5)
 
     cancel_button = ttk.Button(button_frame, text="キャンセル", command=root.destroy)
@@ -164,17 +182,67 @@ def show_copy_popup(value):
     close_button.pack()
 
 
-def preview_renamed_files(directory_path: Path, recursive: bool, dry_run: bool) -> None:
-    """リネーム後のファイル名をGUIでプレビューする"""
+def display_cui_table(renamed_files: List[Tuple[Path, Path]], dry_run: bool) -> None:
+    """CUIでリネーム後のファイル名を表形式で表示する"""
+    if not renamed_files:
+        print("リネーム対象のファイルが見つかりませんでした。")
+        return
+    
+    print("\n" + "="*80)
+    print("ファイル名リネームプレビュー")
+    print("="*80)
+    
+    # ヘッダー表示
+    print(f"{'元のファイル名':<40} {'新しいファイル名':<40}")
+    print("-"*80)
+    
+    # ファイル一覧表示
+    for old_path, new_path in renamed_files:
+        old_name = old_path.name
+        new_name = new_path.name
+        print(f"{old_name:<40} {new_name:<40}")
+    
+    print("-"*80)
+    print(f"合計: {len(renamed_files)}ファイル")
+    print("="*80)
+
+
+def preview_renamed_files_cui(directory_path: Path, recursive: bool, dry_run: bool) -> None:
+    """CUIモードでリネーム後のファイル名をプレビューする"""
     renamed_files = get_renamed_files(directory_path, recursive)
+    
+    display_cui_table(renamed_files, dry_run)
+    
+    if not renamed_files:
+        return
+    
+    # ユーザーに確認
+    action_text = "実行しますか？(dry-run のため実際には書き込まれません)" if dry_run else "リネームを実行しますか？"
+    while True:
+        response = input(f"\n{action_text} [y/N]: ").strip().lower()
+        if response in ['y', 'yes']:
+            rename_files_cui(directory_path, renamed_files, dry_run)
+            break
+        elif response in ['n', 'no', '']:
+            print("キャンセルしました。")
+            break
+        else:
+            print("y または n で答えてください。")
 
-    # GUIのセットアップ
-    root = tk.Tk()
-    root.title("ファイル名リネームプレビュー")
 
-    setup_preview_gui(root, directory_path, renamed_files, dry_run)
-
-    root.mainloop()
+def preview_renamed_files(directory_path: Path, recursive: bool, dry_run: bool) -> None:
+    """リネーム後のファイル名をプレビューする（GUI/CUI自動切り替え）"""
+    if GUI_AVAILABLE:
+        # GUIモード
+        renamed_files = get_renamed_files(directory_path, recursive)
+        root = tk.Tk()
+        root.title("ファイル名リネームプレビュー")
+        setup_preview_gui(root, directory_path, renamed_files, dry_run)
+        root.mainloop()
+    else:
+        # CUIモード
+        print("GUIが利用できないため、CUIモードで実行します。")
+        preview_renamed_files_cui(directory_path, recursive, dry_run)
 
 
 def main():
@@ -182,13 +250,20 @@ def main():
     parser.add_argument("--directory", type=str, required=True, help="処理するディレクトリのパス")
     parser.add_argument("--recursive", action="store_true", help="指定するとサブディレクトリを再帰的に処理する")
     parser.add_argument("--dry-run", action="store_true", help="指定すると実際にはリネームせずに処理をシミュレートする")
+    parser.add_argument("--cui", action="store_true", help="指定するとGUIではなくCUIモードで実行する")
 
     args = parser.parse_args()
     directory: str = args.directory
     recursive: bool = args.recursive
     dry_run: bool = args.dry_run
+    force_cui: bool = args.cui
 
-    preview_renamed_files(Path(directory), recursive, dry_run)
+    if force_cui:
+        # CUIモードを強制
+        preview_renamed_files_cui(Path(directory), recursive, dry_run)
+    else:
+        # 通常の自動判定
+        preview_renamed_files(Path(directory), recursive, dry_run)
 
 
 if __name__ == "__main__":
