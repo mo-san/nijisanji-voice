@@ -2,11 +2,17 @@ import argparse
 from pathlib import Path
 import unicodedata
 from typing import Optional, TypedDict, List, Tuple
-import tkinter as tk
-from tkinter import ttk
-from tkinter import messagebox
 from mutagen.easyid3 import EasyID3
 from mutagen.id3._util import ID3NoHeaderError
+
+# tkinterのインポートを試行し、失敗した場合はCUIモードで動作
+try:
+    import tkinter as tk
+    from tkinter import ttk
+    from tkinter import messagebox
+    GUI_AVAILABLE = True
+except ImportError:
+    GUI_AVAILABLE = False
 
 
 class ID3Tags(TypedDict):
@@ -212,6 +218,17 @@ def setup_preview_gui(root, processed_files, execute_writes, dry_run):
 
 
 def preview_id3_tags(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool) -> None:
+    """ID3タグのプレビューを表示する（GUI/CUI自動切り替え）"""
+    if GUI_AVAILABLE:
+        # GUIモード
+        preview_id3_tags_gui(processed_files, dry_run)
+    else:
+        # CUIモード
+        print("GUIが利用できないため、CUIモードで実行します。")
+        preview_id3_tags_cui(processed_files, dry_run)
+
+
+def preview_id3_tags_gui(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool) -> None:
     """ID3タグのプレビューをGUIで表示する"""
 
     def execute_writes():
@@ -261,20 +278,89 @@ def show_copy_popup(value):
     close_button.pack()
 
 
+def display_cui_table(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool) -> None:
+    """CUIでID3タグ情報を表形式で表示する"""
+    if not processed_files:
+        print("処理対象のファイルが見つかりませんでした。")
+        return
+
+    print("\n" + "=" * 120)
+    print("ID3タグ書き込みプレビュー")
+    print("=" * 120)
+
+    # ヘッダー表示
+    print(f"{'ファイルパス':<40} {'タイトル':<30} {'アーティスト':<20} {'アルバム':<20} {'トラック':<8}")
+    print("-" * 120)
+
+    # ファイル一覧表示
+    for file_path, tags in processed_files:
+        file_name = file_path.name
+        title = tags['track_name'][:28] + "..." if len(tags['track_name']) > 30 else tags['track_name']
+        artist = tags['artist_name'][:18] + "..." if len(tags['artist_name']) > 20 else tags['artist_name']
+        album = tags['album_name'][:18] + "..." if len(tags['album_name']) > 20 else tags['album_name']
+        track = str(tags['track_number'])
+        print(f"{file_name:<40} {title:<30} {artist:<20} {album:<20} {track:<8}")
+
+    print("-" * 120)
+    print(f"合計: {len(processed_files)}ファイル")
+    print("=" * 120)
+
+
+def write_tags_cui(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool) -> None:
+    """CUIモードでID3タグを書き込む"""
+    for file_path, tags in processed_files:
+        write_id3_tags(file_path, tags, dry_run)
+    
+    if not dry_run:
+        print("ID3タグの書き込みが完了しました。")
+
+
+def preview_id3_tags_cui(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool) -> None:
+    """CUIモードでID3タグのプレビューを表示する"""
+    display_cui_table(processed_files, dry_run)
+
+    if not processed_files:
+        return
+
+    # ユーザーに確認
+    action_text = (
+        "実行しますか？(dry-run のため実際には書き込まれません)"
+        if dry_run
+        else "ID3タグの書き込みを実行しますか？"
+    )
+    while True:
+        response = input(f"\n{action_text} [y/N]: ").strip().lower()
+        if response in ["y", "yes"]:
+            write_tags_cui(processed_files, dry_run)
+            break
+        elif response in ["n", "no", ""]:
+            print("キャンセルしました。")
+            break
+        else:
+            print("y または n で答えてください。")
+
+
 def main():
     parser = argparse.ArgumentParser(description="MP3ファイルにID3タグを付けるスクリプト")
     parser.add_argument("--directory", type=str, required=True, help="処理するディレクトリのパス")
     parser.add_argument("--recursive", action="store_true", help="指定するとサブディレクトリを再帰的に処理する")
     parser.add_argument("--dry-run", action="store_true", help="指定すると実際には書き込まずに処理をシミュレートする")
+    parser.add_argument("--cui", action="store_true", help="指定するとGUIではなくCUIモードで実行する")
 
     args = parser.parse_args()
     directory: str = args.directory
     recursive: bool = args.recursive
     dry_run: bool = args.dry_run
+    force_cui: bool = args.cui
 
     files_to_process = process_files(Path(directory), recursive)
 
-    preview_id3_tags(files_to_process, dry_run)
+    if force_cui:
+        # CUIモードを強制
+        preview_id3_tags_cui(files_to_process, dry_run)
+    else:
+        # 通常の自動判定
+        preview_id3_tags(files_to_process, dry_run)
 
 
 if __name__ == "__main__":
