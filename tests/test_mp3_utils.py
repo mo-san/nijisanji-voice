@@ -53,7 +53,7 @@ class TestNormalizeFileName:
         """Test normalizing empty string."""
         result = normalize_file_name("")
         assert result == ""
-    
+
     def test_normalize_dakuten_decomposed(self):
         """Test normalizing decomposed dakuten (濁点分離) characters."""
         # は + 濁点 (U+3099) -> ば
@@ -61,15 +61,15 @@ class TestNormalizeFileName:
         result = normalize_file_name(decomposed)
         expected = "ばびぶべぼ"  # 結合された形
         assert result == expected
-    
+
     def test_normalize_handakuten_decomposed(self):
-        """Test normalizing decomposed handakuten (半濁点分離) characters.""" 
+        """Test normalizing decomposed handakuten (半濁点分離) characters."""
         # は + 半濁点 (U+309A) -> ぱ
-        decomposed = "は\u309Aひ\u309Aふ\u309Aへ\u309Aほ\u309A"  # は+半濁点, ひ+半濁点, ふ+半濁点, へ+半濁点, ほ+半濁点
+        decomposed = "は\u309aひ\u309aふ\u309aへ\u309aほ\u309a"  # は+半濁点, ひ+半濁点, ふ+半濁点, へ+半濁点, ほ+半濁点
         result = normalize_file_name(decomposed)
         expected = "ぱぴぷぺぽ"  # 結合された形
         assert result == expected
-    
+
     def test_normalize_katakana_dakuten_decomposed(self):
         """Test normalizing decomposed katakana dakuten characters."""
         # カタカナの濁点分離パターン
@@ -77,7 +77,7 @@ class TestNormalizeFileName:
         result = normalize_file_name(decomposed)
         expected = "バビブベボ"  # 結合された形
         assert result == expected
-    
+
     def test_normalize_mixed_composition(self):
         """Test normalizing mixed composition patterns."""
         # 一部が分離、一部が結合済みの混合パターン
@@ -85,25 +85,26 @@ class TestNormalizeFileName:
         result = normalize_file_name(mixed)
         expected = "ばパだヂ"  # すべて結合形に正規化
         assert result == expected
-    
+
     def test_normalize_long_vowel_variants(self):
         """Test normalizing different long vowel mark variants."""
         # 波ダッシュ（U+301C）と長音記号（U+30FC）
         with_tilde = "ボイス～テスト"  # 波ダッシュ
-        with_dash = "ボイスーテスト"   # 長音記号
-        
+        with_dash = "ボイスーテスト"  # 長音記号
+
         result_tilde = normalize_file_name(with_tilde)
         result_dash = normalize_file_name(with_dash)
-        
+
         # NFKC正規化により波ダッシュはチルダ（~）に変換される
         assert result_tilde == "ボイス~テスト"  # 波ダッシュ → チルダ
-        assert result_dash == "ボイスーテスト"   # 長音記号はそのまま
-        
+        assert result_dash == "ボイスーテスト"  # 長音記号はそのまま
+
         # 異なる文字なので結果は異なる
         assert result_tilde != result_dash
-        
+
         # それぞれが期待される正規化形になっていることを確認
         import unicodedata
+
         assert result_tilde == unicodedata.normalize("NFKC", with_tilde)
         assert result_dash == unicodedata.normalize("NFKC", with_dash)
 
@@ -114,9 +115,9 @@ class TestIsAlreadyProperlyFormatted:
     def test_properly_formatted_standard(self):
         """Test properly formatted standard files."""
         test_cases = [
-            "[内緒話ボイス]倉持めると - 01 内緒話ボイス.mp3",
-            "[Welcome Voice]猫屋敷美紅 - 01 Welcome Voice.mp3",
-            "[テストボイス]テストキャラ - 01 テストボイス.mp3",
+            "[日常ボイス]クリスタル - 01 日常ボイス.mp3",
+            "[Welcome Voice]キリム - 01 Welcome Voice.mp3",
+            "[ミスティックボイス]ネフィリム - 01 ミスティックボイス.mp3",
         ]
 
         for filename in test_cases:
@@ -127,9 +128,9 @@ class TestIsAlreadyProperlyFormatted:
     def test_properly_formatted_ex(self):
         """Test properly formatted EX files."""
         test_cases = [
-            "[内緒話ボイス]鏑木ろこ - 02 内緒話ボイス EX.mp3",
-            "[Welcome Voice]猫屋敷美紅 - 02 Welcome Voice EX.mp3",
-            "[テストボイス]テストキャラ - 02 テストボイス EX.mp3",
+            "[未来ボイス]サイラス - 02 未来ボイス EX.mp3",
+            "[Welcome Voice]ユニコーン - 02 Welcome Voice EX.mp3",
+            "[神話ボイス]アポロ - 02 神話ボイス EX.mp3",
         ]
 
         for filename in test_cases:
@@ -141,21 +142,21 @@ class TestIsAlreadyProperlyFormatted:
         """Test files that are not properly formatted."""
         test_cases = [
             # Wrong format entirely
-            "01_倉持めると_内緒話ボイス.mp3",
-            "EX_鏑木ろこ_内緒話ボイス.mp3",
-            "倉持めると_内緒話ボイス.mp3",
+            "01_クリスタル_日常ボイス.mp3",
+            "EX_サイラス_未来ボイス.mp3",
+            "クリスタル_日常ボイス.mp3",
             # Wrong track numbers
-            "[内緒話ボイス]倉持めると - 02 内緒話ボイス.mp3",  # Should be 01 without EX
-            "[内緒話ボイス]鏑木ろこ - 01 内緒話ボイス EX.mp3",  # Should be 02 with EX
+            "[日常ボイス]クリスタル - 02 日常ボイス.mp3",  # Should be 01 without EX
+            "[未来ボイス]サイラス - 01 未来ボイス EX.mp3",  # Should be 02 with EX
             # Missing parts
-            "倉持めると - 01 内緒話ボイス.mp3",  # Missing album brackets
-            "[内緒話ボイス]倉持めると 01 内緒話ボイス.mp3",  # Missing dash
-            "[内緒話ボイス]倉持めると - 内緒話ボイス.mp3",  # Missing track number
+            "クリスタル - 01 日常ボイス.mp3",  # Missing album brackets
+            "[日常ボイス]クリスタル 01 日常ボイス.mp3",  # Missing dash
+            "[日常ボイス]クリスタル - 日常ボイス.mp3",  # Missing track number
             # Wrong album/suffix matching
-            "[内緒話ボイス]倉持めると - 01 違うボイス.mp3",  # Album and suffix don't match
+            "[日常ボイス]クリスタル - 01 違うボイス.mp3",  # Album and suffix don't match
             # Invalid extensions
-            "[内緒話ボイス]倉持めると - 01 内緒話ボイス.txt",
-            "[内緒話ボイス]倉持めると - 01 内緒話ボイス",
+            "[日常ボイス]クリスタル - 01 日常ボイス.txt",
+            "[日常ボイス]クリスタル - 01 日常ボイス",
         ]
 
         for filename in test_cases:
@@ -166,16 +167,14 @@ class TestIsAlreadyProperlyFormatted:
     def test_edge_cases_regex_matching(self):
         """Test edge cases for regex matching."""
         # Empty brackets
-        assert not is_already_properly_formatted("[]倉持めると - 01 .mp3")
+        assert not is_already_properly_formatted("[]クリスタル - 01 .mp3")
 
         # Empty character name
-        assert not is_already_properly_formatted("[内緒話ボイス] - 01 内緒話ボイス.mp3")
+        assert not is_already_properly_formatted("[日常ボイス] - 01 日常ボイス.mp3")
 
         # Multiple brackets - this actually matches the regex pattern, so it should be considered "properly formatted"
         # even though it's not ideal. The regex allows any characters except ] in the brackets.
-        assert is_already_properly_formatted(
-            "[内緒話ボイス][extra]倉持めると - 01 内緒話ボイス.mp3"
-        )
+        assert is_already_properly_formatted("[日常ボイス][extra]クリスタル - 01 日常ボイス.mp3")
 
 
 class TestGetMp3Files:
@@ -232,7 +231,7 @@ class TestHandleFileParsingFailure:
 
     def test_handle_already_formatted_file(self, temp_dir, capsys):
         """Test handling already formatted file."""
-        filename = "[内緒話ボイス]倉持めると - 01 内緒話ボイス.mp3"
+        filename = "[日常ボイス]クリスタル - 01 日常ボイス.mp3"
         file_path = temp_dir / filename
         file_path.write_bytes(b"")
 
@@ -267,36 +266,36 @@ class TestHandleFileParsingFailure:
         captured = capsys.readouterr()
         assert "Skipped" in captured.out
         assert str(file_path) in captured.out
-    
+
     def test_handle_irregular_unicode_filenames(self, unicode_filenames, capsys):
         """Test handling files with irregular Unicode character patterns."""
         # 濁点分離パターンのファイルが既に適切にフォーマット済みとして判定されるかテスト
         dakuten_file = unicode_filenames["dakuten_decomposed"]
         normalized_name = normalize_file_name(dakuten_file.name)
-        
+
         # 正規化後のファイル名でテスト
         handle_file_parsing_failure(dakuten_file, normalized_name)
-        
+
         captured = capsys.readouterr()
         # 分離された濁点文字が含まれていても適切に処理されることを確認
         assert "Skipped" in captured.out or "Already formatted" in captured.out
-    
+
     def test_normalize_real_unicode_files(self, unicode_filenames):
         """Test normalizing real Unicode filenames from fixtures."""
         # 実際のフィクスチャファイルを使用してテスト
         dakuten_composed_file = unicode_filenames["dakuten_composed"]
         dakuten_decomposed_file = unicode_filenames["dakuten_decomposed"]
-        
+
         # ファイル名を正規化
         composed_normalized = normalize_file_name(dakuten_composed_file.name)
         decomposed_normalized = normalize_file_name(dakuten_decomposed_file.name)
-        
+
         # 正規化後は同じ結果になるべき
         # （ただし、フィクスチャでは異なる分離パターンを作成しているため、実際の比較は慎重に行う）
-        assert composed_normalized == "01_ばびぶべぼ_だぢづでど.mp3"
+        assert composed_normalized == "01_だぢづでど_ばびぶべぼ.mp3"
         # 分離パターンも正規化されて同じ形になるべき
         assert "ば" in decomposed_normalized  # 濁点が結合されていることを確認
-        
+
         # 半濁点パターンのテスト
         handakuten_decomposed_file = unicode_filenames["handakuten_decomposed"]
         handakuten_normalized = normalize_file_name(handakuten_decomposed_file.name)

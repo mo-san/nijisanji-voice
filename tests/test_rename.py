@@ -18,39 +18,39 @@ class TestParseFileName:
 
     def test_parse_ex_pattern(self):
         """Test parsing EX_ pattern files."""
-        result = parse_file_name("EX_鏑木ろこ_内緒話ボイス.mp3")
+        result = parse_file_name("EX_エリアナ_ファンタジーボイス.mp3")
         assert result is not None
-        assert result["Character"] == "鏑木ろこ"
-        assert result["Suffix"] == "内緒話ボイス"
+        assert result["Character"] == "エリアナ"
+        assert result["Suffix"] == "ファンタジーボイス"
         assert result["IsEX"] is True
         assert "TrackNumber" not in result
 
     def test_parse_standard_pattern(self):
         """Test parsing standard artist_album pattern."""
-        result = parse_file_name("倉持めると_内緒話ボイス.mp3")
+        result = parse_file_name("リュウ_ドラゴンボイス.mp3")
         assert result is not None
-        assert result["Character"] == "倉持めると"
-        assert result["Suffix"] == "内緒話ボイス"
+        assert result["Character"] == "リュウ"
+        assert result["Suffix"] == "ドラゴンボイス"
         assert result["IsEX"] is False
         assert "TrackNumber" not in result
 
     def test_parse_numbered_pattern_01(self):
         """Test parsing 01_artist_album pattern."""
-        result = parse_file_name("01_蝸堂みかる_内緒話ボイス.mp3")
+        result = parse_file_name("01_アルテミス_星空ボイス.mp3")
         assert result is not None
-        assert result["Character"] == "蝸堂みかる"
-        assert result["Suffix"] == "内緒話ボイス"
+        assert result["Character"] == "アルテミス"
+        assert result["Suffix"] == "星空ボイス"
         assert result["IsEX"] is False
         assert result["TrackNumber"] == "01"
 
     def test_parse_numbered_patterns_02_to_06(self):
         """Test parsing track numbers 02-06."""
         test_cases = [
-            ("02_鏑木ろこ_内緒話ボイス.mp3", "02"),
-            ("03_倉持めると_内緒話ボイス.mp3", "03"),
-            ("04_獅子堂あかり_内緒話ボイス.mp3", "04"),
-            ("05_蝸堂みかる_内緒話ボイス.mp3", "05"),
-            ("06_鏑木ろこ_内緒話ボイス.mp3", "06"),
+            ("02_ザック_雷鳴ボイス.mp3", "02"),
+            ("03_ノヴァ_光明ボイス.mp3", "03"),
+            ("04_カイ_海風ボイス.mp3", "04"),
+            ("05_ヴィオラ_花園ボイス.mp3", "05"),
+            ("06_フェニックス_炎舞ボイス.mp3", "06"),
         ]
 
         for filename, expected_track in test_cases:
@@ -61,12 +61,12 @@ class TestParseFileName:
 
     def test_parse_welcome_voice_pattern(self):
         """Test parsing Welcome Voice patterns."""
-        result = parse_file_name("02_Welcome Voice_猫屋敷美紅.mp3")
+        result = parse_file_name("02_サンプル音声_オリオン.mp3")
         assert result is not None
         assert (
-            result["Character"] == "Welcome Voice"
+            result["Character"] == "サンプル音声"
         )  # Note: current logic treats middle part as Character
-        assert result["Suffix"] == "猫屋敷美紅"
+        assert result["Suffix"] == "オリオン"
         assert result["IsEX"] is False
         assert result["TrackNumber"] == "02"
 
@@ -112,24 +112,24 @@ class TestParseFileName:
     def test_parse_edge_cases(self):
         """Test parsing edge cases with special characters."""
         # Test with Japanese characters
-        result = parse_file_name("01_テスト_ボイス.mp3")
+        result = parse_file_name("01_レイナ_魔法ボイス.mp3")
         assert result is not None
-        assert result["Character"] == "テスト"
-        assert result["Suffix"] == "ボイス"
+        assert result["Character"] == "レイナ"
+        assert result["Suffix"] == "魔法ボイス"
         assert result["TrackNumber"] == "01"
 
         # Test with mixed characters
-        result = parse_file_name("EX_Test123_Voice456.mp3")
+        result = parse_file_name("EX_エクシオン_戦闘ボイス.mp3")
         assert result is not None
-        assert result["Character"] == "Test123"
-        assert result["Suffix"] == "Voice456"
+        assert result["Character"] == "エクシオン"
+        assert result["Suffix"] == "戦闘ボイス"
         assert result["IsEX"] is True
     
     def test_parse_irregular_unicode_characters(self):
         """Test parsing files with irregular Unicode character patterns."""
         # 濁点分離パターン
         # は+濁点 -> ば (should be normalized by the system before parsing)
-        dakuten_decomposed = "01_は\u3099び\u3099ぶ\u3099_た\u3099ち\u3099.mp3"
+        dakuten_decomposed = "01_た\u3099ち\u3099つ\u3099_は\u3099ひ\u3099ふ\u3099.mp3"
         result = parse_file_name(dakuten_decomposed)
         assert result is not None
         # The normalize_file_name function should handle this, but let's test raw parsing too
@@ -137,30 +137,30 @@ class TestParseFileName:
         
         # 半濁点分離パターン  
         # は+半濁点 -> ぱ
-        handakuten_decomposed = "EX_は\u309Aぴ\u309A_ボイス.mp3"
+        handakuten_decomposed = "EX_は\u309Aひ\u309A_ダミーボイス.mp3"
         result = parse_file_name(handakuten_decomposed)
         assert result is not None
         assert result["IsEX"] is True
         
         # カタカナ濁点分離パターン
-        katakana_decomposed = "02_ハ\u3099ビ\u3099_ダ\u3099ヂ\u3099.mp3"
+        katakana_decomposed = "02_ハ\u3099ヒ\u3099_タ\u3099チ\u3099.mp3"
         result = parse_file_name(katakana_decomposed)
         assert result is not None
         assert result["TrackNumber"] == "02"
         
         # 混合パターン（一部分離、一部結合）
-        mixed_composition = "03_は\u3099パ_だ\u3099ヂ.mp3"
+        mixed_composition = "03_た\u3099パ_は\u3099ヂ.mp3"
         result = parse_file_name(mixed_composition)
         assert result is not None
         assert result["TrackNumber"] == "03"
         
         # 長音記号の異形パターン
-        long_vowel_tilde = "01_ボイス～_テスト.mp3"  # 波ダッシュ
+        long_vowel_tilde = "01_モックボイス～_テスト.mp3"  # 波ダッシュ
         result = parse_file_name(long_vowel_tilde)
         assert result is not None
         assert result["TrackNumber"] == "01"
         
-        long_vowel_dash = "01_ボイスー_テスト.mp3"  # 長音記号
+        long_vowel_dash = "01_モックボイスー_テスト.mp3"  # 長音記号
         result = parse_file_name(long_vowel_dash)
         assert result is not None
         assert result["TrackNumber"] == "01"
@@ -171,27 +171,27 @@ class TestGenerateNewFileName:
 
     def test_generate_ex_file_name(self):
         """Test generating EX file names."""
-        parsed = {"Character": "鏑木ろこ", "Suffix": "内緒話ボイス", "IsEX": True}
+        parsed = {"Character": "エリアナ", "Suffix": "ファンタジーボイス", "IsEX": True}
         result = generate_new_file_name(parsed)
-        expected = "[内緒話ボイス]鏑木ろこ - 02 内緒話ボイス EX.mp3"
+        expected = "[ファンタジーボイス]エリアナ - 02 ファンタジーボイス EX.mp3"
         assert result == expected
 
     def test_generate_standard_file_name(self):
         """Test generating standard file names."""
-        parsed = {"Character": "倉持めると", "Suffix": "内緒話ボイス", "IsEX": False}
+        parsed = {"Character": "リュウ", "Suffix": "ドラゴンボイス", "IsEX": False}
         result = generate_new_file_name(parsed)
-        expected = "[内緒話ボイス]倉持めると - 01 内緒話ボイス.mp3"
+        expected = "[ドラゴンボイス]リュウ - 01 ドラゴンボイス.mp3"
         assert result == expected
 
     def test_generate_with_track_number(self):
         """Test generating file names with specific track numbers."""
         test_cases = [
-            ("01", "[内緒話ボイス]蝸堂みかる - 01 内緒話ボイス.mp3"),
-            ("02", "[内緒話ボイス]鏑木ろこ - 02 内緒話ボイス.mp3"),
-            ("03", "[内緒話ボイス]倉持めると - 03 内緒話ボイス.mp3"),
-            ("04", "[内緒話ボイス]獅子堂あかり - 04 内緒話ボイス.mp3"),
-            ("05", "[内緒話ボイス]蝸堂みかる - 05 内緒話ボイス.mp3"),
-            ("06", "[内緒話ボイス]鏑木ろこ - 06 内緒話ボイス.mp3"),
+            ("01", "[星空ボイス]アルテミス - 01 星空ボイス.mp3"),
+            ("02", "[雷鳴ボイス]ザック - 02 雷鳴ボイス.mp3"),
+            ("03", "[光明ボイス]ノヴァ - 03 光明ボイス.mp3"),
+            ("04", "[海風ボイス]カイ - 04 海風ボイス.mp3"),
+            ("05", "[花園ボイス]ヴィオラ - 05 花園ボイス.mp3"),
+            ("06", "[炎舞ボイス]フェニックス - 06 炎舞ボイス.mp3"),
         ]
 
         for track_num, expected in test_cases:
@@ -199,7 +199,7 @@ class TestGenerateNewFileName:
                 "Character": expected.split("]")[1].split(" - ")[
                     0
                 ],  # Extract character from expected
-                "Suffix": "内緒話ボイス",
+                "Suffix": expected.split("[")[1].split("]")[0],  # Extract suffix from expected
                 "IsEX": False,
                 "TrackNumber": track_num,
             }
@@ -209,26 +209,26 @@ class TestGenerateNewFileName:
     def test_generate_welcome_voice_pattern(self):
         """Test generating Welcome Voice file names."""
         parsed = {
-            "Character": "Welcome Voice",
-            "Suffix": "猫屋敷美紅",
+            "Character": "サンプル音声",
+            "Suffix": "オリオン",
             "IsEX": False,
             "TrackNumber": "02",
         }
         result = generate_new_file_name(parsed)
-        expected = "[猫屋敷美紅]Welcome Voice - 02 猫屋敷美紅.mp3"
+        expected = "[オリオン]サンプル音声 - 02 オリオン.mp3"
         assert result == expected
 
     def test_track_number_overrides_ex_logic(self):
         """Test that TrackNumber takes precedence over EX logic."""
         # EX file with explicit track number should use that number
         parsed = {
-            "Character": "テスト",
-            "Suffix": "ボイス",
+            "Character": "メルクリウス",
+            "Suffix": "紫水晶ボイス",
             "IsEX": True,  # This would normally give "02"
             "TrackNumber": "05",  # But this should override
         }
         result = generate_new_file_name(parsed)
-        expected = "[ボイス]テスト - 05 ボイス EX.mp3"
+        expected = "[紫水晶ボイス]メルクリウス - 05 紫水晶ボイス EX.mp3"
         assert result == expected
 
 
@@ -246,8 +246,8 @@ class TestGetRenamedFiles:
 
             assert len(renamed_files) == 1
             old_path, new_path = renamed_files[0]
-            assert old_path.name == "02_鏑木ろこ_内緒話ボイス.mp3"
-            assert new_path.name == "[内緒話ボイス]鏑木ろこ - 02 内緒話ボイス.mp3"
+            assert old_path.name == "02_ザック_雷鳴ボイス.mp3"
+            assert new_path.name == "[雷鳴ボイス]ザック - 02 雷鳴ボイス.mp3"
 
     def test_get_renamed_files_already_formatted(self, sample_mp3_files, capsys):
         """Test handling of already formatted files."""
