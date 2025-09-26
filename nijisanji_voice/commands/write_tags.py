@@ -48,8 +48,8 @@ def extract_track_info(track_part: str, artist_name: str) -> Tuple[int, str]:
     タイトル
 
     例:
-    01 ジューンブライド2024ボイス
-    夜更かしボイス EX
+    01 サンプルボイス
+    XXXボイス EX
 
     Args:
         track_part (str): トラック名の部分
@@ -84,17 +84,32 @@ def parse_file_name(file_name: str) -> Optional[ID3Tags]:
     ファイル名を解析してID3タグの情報を抽出する
 
     期待されるファイル名のパターン:
-    [カテゴリ]キャラクター名 - 番号 タイトル (EX).mp3
+    [アルバム名]アーティスト名 - 番号 トラック名 (EX).mp3
     または
-    [カテゴリ]キャラクター名 - タイトル.mp3
+    [アルバム名]アーティスト名 - トラック名.mp3
+
+    先頭に (YYYY-MM) の日付が付く場合も許容する。
 
     例:
-    [ジューンブライド2024ボイス]ソフィア・ヴァレンタイン - 01 ジューンブライド2024ボイス.mp3
-    [夜更かしボイス]五十嵐梨花 - 02 夜更かしボイス EX.mp3
-    [お忍びボイス]天宮こころ - お忍びボイス.mp3
+    [XXXボイス]ヴィオラ - 01 花園ボイス.mp3
+    [ダミーボイス]ザック - 02 雷鳴ボイス EX.mp3
+    [星空ボイス]アルテミス - 星空ボイス.mp3
+    (2001-01) [サンプルボイス Vol.3]ノヴァ - 01 光明ボイス Vol.3.mp3
     """
     if not file_name.endswith(".mp3"):
         return None
+
+    # 先頭に "(YYYY-MM) " がある場合は取り除く
+    if file_name.startswith("(") and len(file_name) >= 9 and file_name[8] == ")":
+        # フォーマット確認 (YYYY-MM)
+        date_part = file_name[1:8]
+        if date_part[:4].isdigit() and date_part[4] == "-" and date_part[5:7].isdigit():
+            # 閉じ括弧の次がスペースなら除去
+            if len(file_name) > 9 and file_name[9] == " ":
+                file_name = file_name[10:]
+            else:
+                # スペースが無い場合は括弧までを除去
+                file_name = file_name[9:]
 
     base_name = file_name[:-4]
     parts = base_name.split(" - ")
