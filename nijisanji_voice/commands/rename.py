@@ -230,6 +230,10 @@ def preview_renamed_files(directory_path: Path, recursive: bool, dry_run: bool) 
     if GUI_AVAILABLE:
         # GUIモード
         renamed_files = get_renamed_files(directory_path, recursive)
+        # 対象ファイルが0件の場合はCUIと同じメッセージを表示して正常終了
+        if not renamed_files:
+            print_no_files_message("リネーム対象")
+            return
         root = tk.Tk()
         root.title("ファイル名リネームプレビュー")
         setup_preview_gui(root, directory_path, renamed_files, dry_run)

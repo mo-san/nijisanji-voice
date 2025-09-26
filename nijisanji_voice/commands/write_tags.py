@@ -255,6 +255,11 @@ def preview_id3_tags(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool)
 def preview_id3_tags_gui(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool) -> None:
     """ID3タグのプレビューをGUIで表示する"""
 
+    # 対象ファイルが0件の場合はCUIと同じメッセージを表示して正常終了
+    if not processed_files:
+        print_no_files_message()
+        return
+
     def execute_writes():
         for i, (file_path, tags) in enumerate(processed_files, 1):
             write_id3_tags(file_path, tags, dry_run)
