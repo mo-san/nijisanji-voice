@@ -24,28 +24,28 @@ def create_main_parser():
     # rename コマンド
     rename_parser = subparsers.add_parser("rename", help="MP3ファイルをリネーム")
     rename_parser.add_argument(
-        "--directory", type=str, required=True, help="処理するディレクトリのパス"
+        "-d", "--directory", type=str, required=True, help="処理するディレクトリのパス"
     )
     rename_parser.add_argument(
-        "--recursive", action="store_true", help="サブディレクトリを再帰的に処理"
+        "-r", "--recursive", action="store_true", help="サブディレクトリを再帰的に処理"
     )
     rename_parser.add_argument(
-        "--dry-run", action="store_true", help="実際には変更せずにシミュレーション実行"
+        "-n", "--dry-run", action="store_true", help="実際には変更せずにシミュレーション実行"
     )
-    rename_parser.add_argument("--cui", action="store_true", help="GUIではなくCUIモードで実行")
+    rename_parser.add_argument("-c", "--cui", action="store_true", help="GUIではなくCUIモードで実行")
 
     # write-tags コマンド
     write_tags_parser = subparsers.add_parser("write-tags", help="MP3ファイルにID3タグを書き込み")
     write_tags_parser.add_argument(
-        "--directory", type=str, required=True, help="処理するディレクトリのパス"
+        "-d", "--directory", type=str, required=True, help="処理するディレクトリのパス"
     )
     write_tags_parser.add_argument(
-        "--recursive", action="store_true", help="サブディレクトリを再帰的に処理"
+        "-r", "--recursive", action="store_true", help="サブディレクトリを再帰的に処理"
     )
     write_tags_parser.add_argument(
-        "--dry-run", action="store_true", help="実際には変更せずにシミュレーション実行"
+        "-n", "--dry-run", action="store_true", help="実際には変更せずにシミュレーション実行"
     )
-    write_tags_parser.add_argument("--cui", action="store_true", help="GUIではなくCUIモードで実行")
+    write_tags_parser.add_argument("-c", "--cui", action="store_true", help="GUIではなくCUIモードで実行")
 
     return parser
 

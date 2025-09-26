@@ -83,19 +83,21 @@ def setup_common_argument_parser(description: str) -> argparse.ArgumentParser:
         設定されたArgumentParser
     """
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument("--directory", type=str, required=True, help="処理するディレクトリのパス")
+    parser.add_argument("-d", "--directory", type=str, required=True, help="処理するディレクトリのパス")
     parser.add_argument(
+        "-r",
         "--recursive",
         action="store_true",
         help="指定するとサブディレクトリを再帰的に処理する",
     )
     parser.add_argument(
+        "-n",
         "--dry-run",
         action="store_true",
         help="指定すると実際には書き込まずに処理をシミュレートする",
     )
     parser.add_argument(
-        "--cui", action="store_true", help="指定するとGUIではなくCUIモードで実行する"
+        "-c", "--cui", action="store_true", help="指定するとGUIではなくCUIモードで実行する"
     )
     return parser
 
