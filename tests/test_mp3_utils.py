@@ -309,13 +309,13 @@ class TestID3Tags:
         """Test ID3Tags structure and typing."""
         # This tests that the TypedDict is properly defined
         tags: ID3Tags = {
-            "track_name": "Test Track",
+            "track_name": "[Test Album] Test Artist",
             "artist_name": "Test Artist",
             "album_name": "Test Album",
             "track_number": 1,
         }
 
-        assert tags["track_name"] == "Test Track"
+        assert tags["track_name"] == "[Test Album] Test Artist"
         assert tags["artist_name"] == "Test Artist"
         assert tags["album_name"] == "Test Album"
         assert tags["track_number"] == 1
