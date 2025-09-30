@@ -89,7 +89,7 @@ def parse_file_name(file_name: str) -> Optional[ID3Tags]:
     または
     [アルバム名]アーティスト名 - トラック名.mp3
 
-    先頭に (YYYY-MM) の日付が付く場合も許容する。
+    先頭に (YYYY-MM) の日付が付く場合も許容し、その場合はアルバム名に含める。
 
     例:
     [XXXボイス]ヴィオラ - 01 花園ボイス.mp3
@@ -100,11 +100,15 @@ def parse_file_name(file_name: str) -> Optional[ID3Tags]:
     if not file_name.endswith(".mp3"):
         return None
 
-    # 先頭に "(YYYY-MM) " がある場合は取り除く
+    date_prefix = ""
+    original_file_name = file_name
+    
+    # 先頭に "(YYYY-MM) " がある場合は日付を保存して取り除く
     if file_name.startswith("(") and len(file_name) >= 9 and file_name[8] == ")":
         # フォーマット確認 (YYYY-MM)
         date_part = file_name[1:8]
         if date_part[:4].isdigit() and date_part[4] == "-" and date_part[5:7].isdigit():
+            date_prefix = file_name[:9]  # "(YYYY-MM)" を保存
             # 閉じ括弧の次がスペースなら除去
             if len(file_name) > 9 and file_name[9] == " ":
                 file_name = file_name[10:]
@@ -123,6 +127,10 @@ def parse_file_name(file_name: str) -> Optional[ID3Tags]:
 
     album_name = prefix_part[1 : prefix_part.index("]")]
     artist_name = prefix_part[prefix_part.index("]") + 1 :]
+
+    # 日付プレフィックスがある場合はアルバム名に追加
+    if date_prefix:
+        album_name = f"{date_prefix} [{album_name}]"
 
     track_number, track_name = extract_track_info(track_part, artist_name, album_name)
 

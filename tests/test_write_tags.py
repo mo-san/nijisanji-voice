@@ -88,9 +88,9 @@ class TestParseFileNameWriteTags:
         result = parse_file_name(filename)
         
         assert result is not None
-        assert result["track_name"] == "[サンプルボイス Vol.3] ノヴァ"
+        assert result["track_name"] == "[(2001-01) [サンプルボイス Vol.3]] ノヴァ"
         assert result["artist_name"] == "ノヴァ"
-        assert result["album_name"] == "サンプルボイス Vol.3"
+        assert result["album_name"] == "(2001-01) [サンプルボイス Vol.3]"
         assert result["track_number"] == 1
 
     def test_parse_filename_complex_names(self):
@@ -179,3 +179,52 @@ class TestID3TagsCompat:
         assert tags["artist_name"] == "Test Artist"
         assert tags["album_name"] == "Test Album"
         assert tags["track_number"] == 2
+
+    def test_parse_filename_with_date_prefix_advanced(self):
+        """Test parsing filename with date prefix - advanced cases."""
+        # 複数の日付形式のテスト
+        test_cases = [
+            {
+                "filename": "(2025-09) [ABCボイス]アルテミス - 01 サンプルボイス.mp3",
+                "expected_album": "(2025-09) [ABCボイス]",
+                "expected_track": "[(2025-09) [ABCボイス]] アルテミス",
+                "expected_artist": "アルテミス"
+            },
+            {
+                "filename": "(2024-12) [テストボイス]テストアーティスト - 02 テストボイス EX.mp3", 
+                "expected_album": "(2024-12) [テストボイス]",
+                "expected_track": "テストボイス [(2024-12) [テストボイス]] テストアーティスト EX",
+                "expected_artist": "テストアーティスト"
+            }
+        ]
+        
+        for case in test_cases:
+            result = parse_file_name(case["filename"])
+            assert result is not None, f"Failed to parse: {case['filename']}"
+            assert result["album_name"] == case["expected_album"]
+            assert result["track_name"] == case["expected_track"] 
+            assert result["artist_name"] == case["expected_artist"]
+
+    def test_parse_filename_without_date_prefix_advanced(self):
+        """Test parsing filename without date prefix - ensure no date formatting."""
+        test_cases = [
+            {
+                "filename": "[ABCボイス]アルテミス - 01 サンプルボイス.mp3",
+                "expected_album": "ABCボイス",
+                "expected_track": "[ABCボイス] アルテミス",
+                "expected_artist": "アルテミス"
+            },
+            {
+                "filename": "[テストボイス]テストアーティスト - 02 テストボイス EX.mp3",
+                "expected_album": "テストボイス", 
+                "expected_track": "テストボイス [テストボイス] テストアーティスト EX",
+                "expected_artist": "テストアーティスト"
+            }
+        ]
+        
+        for case in test_cases:
+            result = parse_file_name(case["filename"])
+            assert result is not None, f"Failed to parse: {case['filename']}"
+            assert result["album_name"] == case["expected_album"]
+            assert result["track_name"] == case["expected_track"]
+            assert result["artist_name"] == case["expected_artist"]
