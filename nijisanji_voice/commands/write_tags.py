@@ -38,7 +38,7 @@ if GUI_AVAILABLE:
     from tkinter import messagebox
 
 
-def extract_track_info(track_part: str, artist_name: str) -> Tuple[int, str]:
+def extract_track_info(track_part: str, artist_name: str, album_name: str) -> Tuple[int, str]:
     """
     トラック番号とトラック名を抽出する
 
@@ -54,6 +54,7 @@ def extract_track_info(track_part: str, artist_name: str) -> Tuple[int, str]:
     Args:
         track_part (str): トラック名の部分
         artist_name (str): アーティスト名
+        album_name (str): アルバム名
 
     Returns:
         Tuple[int, str]: トラック番号とトラック名
@@ -61,7 +62,7 @@ def extract_track_info(track_part: str, artist_name: str) -> Tuple[int, str]:
     track_info = track_part.split(" ", 1)
 
     if len(track_info) != 2:
-        return 1, f"{track_part} ({artist_name})"
+        return 1, f"[{album_name}] {artist_name}"
 
     try:
         track_number = int(track_info[0])
@@ -72,9 +73,9 @@ def extract_track_info(track_part: str, artist_name: str) -> Tuple[int, str]:
 
     # EXの処理
     if track_name.endswith(" EX"):
-        track_name = track_name[:-3] + f" ({artist_name}) EX"
+        track_name = track_name[:-3] + f" [{album_name}] {artist_name} EX"
     else:
-        track_name = f"{track_name} ({artist_name})"
+        track_name = f"[{album_name}] {artist_name}"
 
     return track_number, track_name
 
@@ -123,7 +124,7 @@ def parse_file_name(file_name: str) -> Optional[ID3Tags]:
     album_name = prefix_part[1 : prefix_part.index("]")]
     artist_name = prefix_part[prefix_part.index("]") + 1 :]
 
-    track_number, track_name = extract_track_info(track_part, artist_name)
+    track_number, track_name = extract_track_info(track_part, artist_name, album_name)
 
     return ID3Tags(
         track_name=track_name,
