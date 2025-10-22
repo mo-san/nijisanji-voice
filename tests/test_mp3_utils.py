@@ -138,6 +138,19 @@ class TestIsAlreadyProperlyFormatted:
                 filename
             ), f"Should be properly formatted: {filename}"
 
+    def test_properly_formatted_ex_another(self):
+        """Test properly formatted EX Another files."""
+        test_cases = [
+            "[月光ボイス]セレスティア - 03 月光ボイス EX(Another).mp3",
+            "[深海ボイス]レヴィア - 03 深海ボイス EX(Another).mp3",
+            "[天空ボイス]ユピテル - 03 天空ボイス EX(Another).mp3",
+        ]
+
+        for filename in test_cases:
+            assert is_already_properly_formatted(
+                filename
+            ), f"Should be properly formatted: {filename}"
+
     def test_not_properly_formatted_invalid_patterns(self):
         """Test files that are not properly formatted."""
         test_cases = [

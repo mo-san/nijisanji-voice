@@ -35,6 +35,18 @@ if GUI_AVAILABLE:
 
 def parse_file_name(file_name: str) -> Optional[Dict[str, object]]:
     """ファイル名を解析して必要な情報を抽出する"""
+    # EX Another_アーティスト名_アルバム名/トラック名.mp3 形式
+    if file_name.startswith("EX Another_"):
+        parts = file_name[11:-4].split("_")
+        if len(parts) == 2:
+            return {
+                "Character": parts[0],  # アーティスト名
+                "Suffix": parts[1],  # アルバム名/トラック名
+                "IsEX": True,
+                "IsAnother": True,
+            }
+        return None
+    
     # EX_アーティスト名_アルバム名/トラック名.mp3 形式
     if file_name.startswith("EX_"):
         parts = file_name[3:-4].split("_")
@@ -43,6 +55,7 @@ def parse_file_name(file_name: str) -> Optional[Dict[str, object]]:
                 "Character": parts[0],  # アーティスト名
                 "Suffix": parts[1],  # アルバム名/トラック名
                 "IsEX": True,
+                "IsAnother": False,
             }
         return None
 
@@ -53,6 +66,7 @@ def parse_file_name(file_name: str) -> Optional[Dict[str, object]]:
             "Character": parts[0],  # アーティスト名
             "Suffix": parts[1],  # アルバム名/トラック名
             "IsEX": False,
+            "IsAnother": False,
         }
     # 01_アーティスト名_アルバム名/トラック名.mp3 形式 (track numbers 01-06)
     if len(parts) == 3 and parts[0].isdigit() and parts[0] in ["01", "02", "03", "04", "05", "06"]:
@@ -60,6 +74,7 @@ def parse_file_name(file_name: str) -> Optional[Dict[str, object]]:
             "Character": parts[1],  # アーティスト名
             "Suffix": parts[2],  # アルバム名/トラック名
             "IsEX": False,
+            "IsAnother": False,
             "TrackNumber": parts[0],  # トラック番号
         }
     return None
@@ -71,14 +86,28 @@ def generate_new_file_name(parsed_name: Dict[str, object]) -> str:
     character = parsed_name["Character"]  # アーティスト名
     suffix = parsed_name["Suffix"]  # アルバム名/トラック名
     is_ex = parsed_name["IsEX"]
+    is_another = parsed_name.get("IsAnother", False)
 
-    # TrackNumberが指定されている場合はそれを使用、EXの場合は02、それ以外は01
+    # TrackNumberが指定されている場合はそれを使用
     if "TrackNumber" in parsed_name:
         number = parsed_name["TrackNumber"]
     else:
-        number = "02" if is_ex else "01"
+        # EX Anotherの場合は03、EXの場合は02、それ以外は01
+        if is_another:
+            number = "03"
+        elif is_ex:
+            number = "02"
+        else:
+            number = "01"
     
-    ex_suffix = " EX" if is_ex else ""
+    # サフィックス生成: EX Anotherの場合は " EX(Another)"、EXの場合は " EX"、それ以外は ""
+    if is_another:
+        ex_suffix = " EX(Another)"
+    elif is_ex:
+        ex_suffix = " EX"
+    else:
+        ex_suffix = ""
+    
     return f"[{suffix}]{character} - {number} {suffix}{ex_suffix}.mp3"
 
 

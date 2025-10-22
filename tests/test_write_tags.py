@@ -24,6 +24,13 @@ class TestExtractTrackInfo:
         assert track_number == 2
         assert track_name == "サンプルボイス [ABCボイス] アルテミス EX"
 
+    def test_extract_track_info_ex_another_track(self):
+        """Test extracting track info for EX(Another) track."""
+        track_number, track_name = extract_track_info("03 月光ボイス EX(Another)", "セレスティア", "月光ボイス")
+
+        assert track_number == 3
+        assert track_name == "月光ボイス [月光ボイス] セレスティア EX(Another)"
+
     def test_extract_track_info_without_number(self):
         """Test extracting track info without track number."""
         track_number, track_name = extract_track_info("サンプルボイス", "アルテミス", "ABCボイス")
@@ -70,6 +77,17 @@ class TestParseFileNameWriteTags:
         assert result["artist_name"] == "アルテミス"
         assert result["album_name"] == "ABCボイス"
         assert result["track_number"] == 2
+
+    def test_parse_ex_another_filename(self):
+        """Test parsing EX(Another) filename format."""
+        filename = "[月光ボイス]セレスティア - 03 月光ボイス EX(Another).mp3"
+        result = parse_file_name(filename)
+
+        assert result is not None
+        assert result["track_name"] == "月光ボイス [月光ボイス] セレスティア EX(Another)"
+        assert result["artist_name"] == "セレスティア"
+        assert result["album_name"] == "月光ボイス"
+        assert result["track_number"] == 3
 
     def test_parse_filename_without_track_number(self):
         """Test parsing filename without track number."""

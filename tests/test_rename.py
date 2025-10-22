@@ -25,6 +25,16 @@ class TestParseFileName:
         assert result["IsEX"] is True
         assert "TrackNumber" not in result
 
+    def test_parse_ex_another_pattern(self):
+        """Test parsing EX Another_ pattern files."""
+        result = parse_file_name("EX Another_セレスティア_月光ボイス.mp3")
+        assert result is not None
+        assert result["Character"] == "セレスティア"
+        assert result["Suffix"] == "月光ボイス"
+        assert result["IsEX"] is True
+        assert result["IsAnother"] is True
+        assert "TrackNumber" not in result
+
     def test_parse_standard_pattern(self):
         """Test parsing standard artist_album pattern."""
         result = parse_file_name("リュウ_ドラゴンボイス.mp3")
@@ -174,6 +184,13 @@ class TestGenerateNewFileName:
         parsed = {"Character": "エリアナ", "Suffix": "ファンタジーボイス", "IsEX": True}
         result = generate_new_file_name(parsed)
         expected = "[ファンタジーボイス]エリアナ - 02 ファンタジーボイス EX.mp3"
+        assert result == expected
+
+    def test_generate_ex_another_file_name(self):
+        """Test generating EX Another file names."""
+        parsed = {"Character": "セレスティア", "Suffix": "月光ボイス", "IsEX": True, "IsAnother": True}
+        result = generate_new_file_name(parsed)
+        expected = "[月光ボイス]セレスティア - 03 月光ボイス EX(Another).mp3"
         assert result == expected
 
     def test_generate_standard_file_name(self):

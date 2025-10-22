@@ -50,6 +50,7 @@ def extract_track_info(track_part: str, artist_name: str, album_name: str) -> Tu
     例:
     01 サンプルボイス
     XXXボイス EX
+    XXXボイス EX(Another)
 
     Args:
         track_part (str): トラック名の部分
@@ -71,8 +72,11 @@ def extract_track_info(track_part: str, artist_name: str, album_name: str) -> Tu
         track_number = 1
         track_name = track_part
 
+    # EX(Another)の処理
+    if track_name.endswith(" EX(Another)"):
+        track_name = track_name[:-12] + f" [{album_name}] {artist_name} EX(Another)"
     # EXの処理
-    if track_name.endswith(" EX"):
+    elif track_name.endswith(" EX"):
         track_name = track_name[:-3] + f" [{album_name}] {artist_name} EX"
     else:
         track_name = f"[{album_name}] {artist_name}"

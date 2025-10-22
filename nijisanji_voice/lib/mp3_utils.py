@@ -27,24 +27,27 @@ def normalize_file_name(file_name: str) -> str:
 
 def is_already_properly_formatted(file_name: str) -> bool:
     """ファイル名がすでに適切にフォーマットされているかチェックする"""
-    # 目標フォーマット: [アルバム名]アーティスト名 - 01/02 トラック名[ EX].mp3
+    # 目標フォーマット: [アルバム名]アーティスト名 - 01/02/03 トラック名[ EX][ EX(Another)].mp3
     # 通常版: [アルバム名]アーティスト名 - 01 トラック名.mp3
     # EX版: [アルバム名]アーティスト名 - 02 トラック名 EX.mp3
+    # EX Another版: [アルバム名]アーティスト名 - 03 トラック名 EX(Another).mp3
     # 先頭に任意で (YYYY-MM) の日付が付与される場合も許容する。
 
     # 正規表現パターン（先頭に日付が任意で付与される場合を許容）
-    pattern = r"^(?:\(\d{4}-\d{2}\)\s)?\[([^\]]+)\](.+?) - (01|02) \1( EX)?\.mp3$"
+    # アルバム名とトラック名が一致することを確認
+    pattern = r"^(?:\(\d{4}-\d{2}\)\s)?\[([^\]]+)\](.+?) - (01|02|03) \1(?: EX(?:\(Another\))?)?.mp3$"
 
     match = re.match(pattern, file_name)
     if not match:
         return False
 
-    album_name, artist_name, number, ex_suffix = match.groups()
+    album_name, artist_name, number = match.groups()
 
-    # EX版の場合は番号が02で EX サフィックスが必要
-    if ex_suffix == " EX":
+    # 番号とサフィックスの整合性をチェック
+    if " EX(Another)" in file_name:
+        return number == "03"
+    elif " EX" in file_name:
         return number == "02"
-    # 通常版の場合は番号が01で EX サフィックスがない
     else:
         return number == "01"
 
