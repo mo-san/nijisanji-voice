@@ -29,7 +29,7 @@ class TestExtractTrackInfo:
         track_number, track_name = extract_track_info("03 月光ボイス EX(Another)", "セレスティア", "月光ボイス")
 
         assert track_number == 3
-        assert track_name == "月光ボイス [月光ボイス] セレスティア EX(Another)"
+        assert track_name == "[月光ボイス] セレスティア EX(Another)"
 
     def test_extract_track_info_without_number(self):
         """Test extracting track info without track number."""
@@ -84,7 +84,7 @@ class TestParseFileNameWriteTags:
         result = parse_file_name(filename)
 
         assert result is not None
-        assert result["track_name"] == "月光ボイス [月光ボイス] セレスティア EX(Another)"
+        assert result["track_name"] == "[月光ボイス] セレスティア EX(Another)"
         assert result["artist_name"] == "セレスティア"
         assert result["album_name"] == "月光ボイス"
         assert result["track_number"] == 3
@@ -234,8 +234,8 @@ class TestID3TagsCompat:
             },
             {
                 "filename": "[テストボイス]テストアーティスト - 02 テストボイス EX.mp3",
-                "expected_album": "テストボイス", 
-                "expected_track": "テストボイス [テストボイス] テストアーティスト EX",
+                "expected_album": "テストボイス",
+                "expected_track": "[テストボイス] テストアーティスト EX",
                 "expected_artist": "テストアーティスト"
             }
         ]

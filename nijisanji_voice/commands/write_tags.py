@@ -70,18 +70,31 @@ def extract_track_info(track_part: str, artist_name: str, album_name: str) -> Tu
 
     try:
         track_number = int(track_info[0])
-        track_name = track_info[1]
+        base_track_name = track_info[1]
     except ValueError:
         track_number = 1
-        track_name = track_part
+        base_track_name = track_part
 
     # EX(Another)の処理
-    if track_name.endswith(" EX(Another)"):
-        track_name = track_name[:-12] + f" [{album_name}] {artist_name} EX(Another)"
+    if base_track_name.endswith(" EX(Another)"):
+        # "XXXボイス EX(Another)" → "XXXボイス [アルバム] アーティスト EX(Another)"
+        prefix = base_track_name[:-12]  # " EX(Another)" を除去
+        # トラック名とアルバム名が同じ場合は、トラック名を省略
+        if prefix == album_name:
+            track_name = f"[{album_name}] {artist_name} EX(Another)"
+        else:
+            track_name = f"{prefix} [{album_name}] {artist_name} EX(Another)"
     # EXの処理
-    elif track_name.endswith(" EX"):
-        track_name = track_name[:-3] + f" [{album_name}] {artist_name} EX"
+    elif base_track_name.endswith(" EX"):
+        # "XXXボイス EX" → "XXXボイス [アルバム] アーティスト EX"
+        prefix = base_track_name[:-3]  # " EX" を除去
+        # トラック名とアルバム名が同じ場合は、トラック名を省略
+        if prefix == album_name:
+            track_name = f"[{album_name}] {artist_name} EX"
+        else:
+            track_name = f"{prefix} [{album_name}] {artist_name} EX"
     else:
+        # 通常のトラック → "[アルバム] アーティスト"
         track_name = f"[{album_name}] {artist_name}"
 
     return track_number, track_name
