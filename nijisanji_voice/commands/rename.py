@@ -8,6 +8,7 @@ from ..lib.cli_utils import (
     display_cui_table_footer,
     setup_common_argument_parser,
     print_no_files_message,
+    natural_sort_key,
 )
 from ..lib.gui_utils import (
     GUI_AVAILABLE,
@@ -225,12 +226,15 @@ def display_cui_table(renamed_files: List[Tuple[Path, Path]], dry_run: bool) -> 
 
     display_cui_table_header("ファイル名リネームプレビュー")
 
+    # 自然順でソート
+    sorted_files = sorted(renamed_files, key=lambda x: natural_sort_key(str(x[0])))
+
     # ヘッダー表示
     print(f"{'元のファイル名':<40} {'新しいファイル名':<40}")
     print("-" * 80)
 
     # ファイル一覧表示
-    for old_path, new_path in renamed_files:
+    for old_path, new_path in sorted_files:
         old_name = old_path.name
         new_name = new_path.name
         print(f"{old_name:<40} {new_name:<40}")

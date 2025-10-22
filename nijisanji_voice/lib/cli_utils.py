@@ -112,3 +112,24 @@ def truncate_text(text: str, max_length: int) -> str:
     if len(text) > max_length:
         return text[: max_length - 3] + "..."
     return text
+
+
+def natural_sort_key(text: str) -> list:
+    """
+    自然順ソート用のキーを生成する
+
+    数字を含む文字列を自然な順序でソートするためのキーを返す。
+    例: ["file1.mp3", "file2.mp3", "file10.mp3"] → 正しい順序でソート
+
+    Args:
+        text: ソート対象の文字列
+
+    Returns:
+        ソート用のキーリスト
+    """
+    import re
+
+    def atoi(s: str):
+        return int(s) if s.isdigit() else s
+
+    return [atoi(c) for c in re.split(r"(\d+)", text)]

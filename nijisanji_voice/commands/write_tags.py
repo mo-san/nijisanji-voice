@@ -11,6 +11,7 @@ from ..lib.cli_utils import (
     setup_common_argument_parser,
     print_no_files_message,
     truncate_text,
+    natural_sort_key,
 )
 
 from ..lib.gui_utils import (
@@ -316,6 +317,9 @@ def display_cui_table(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool
 
     display_cui_table_header("ID3タグ書き込みプレビュー", 120)
 
+    # 自然順でソート
+    sorted_files = sorted(processed_files, key=lambda x: natural_sort_key(str(x[0])))
+
     # ヘッダー表示
     print(
         f"{'ファイルパス':<40} {'タイトル':<30} {'アーティスト':<20} {'アルバム':<20} {'トラック':<8}"
@@ -323,7 +327,7 @@ def display_cui_table(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool
     print("-" * 120)
 
     # ファイル一覧表示
-    for file_path, tags in processed_files:
+    for file_path, tags in sorted_files:
         file_name = file_path.name
         title = truncate_text(tags["track_name"], 30)
         artist = truncate_text(tags["artist_name"], 20)
