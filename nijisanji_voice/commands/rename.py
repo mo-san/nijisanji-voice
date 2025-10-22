@@ -9,6 +9,7 @@ from ..lib.cli_utils import (
     setup_common_argument_parser,
     print_no_files_message,
     natural_sort_key,
+    pad_text,
 )
 from ..lib.gui_utils import (
     GUI_AVAILABLE,
@@ -229,15 +230,21 @@ def display_cui_table(renamed_files: List[Tuple[Path, Path]], dry_run: bool) -> 
     # 自然順でソート
     sorted_files = sorted(renamed_files, key=lambda x: natural_sort_key(str(x[0])))
 
+    # カラム幅を定義
+    old_name_width = 40
+    new_name_width = 40
+
     # ヘッダー表示
-    print(f"{'元のファイル名':<40} {'新しいファイル名':<40}")
+    old_header = pad_text("元のファイル名", old_name_width)
+    new_header = pad_text("新しいファイル名", new_name_width)
+    print(f"{old_header} {new_header}")
     print("-" * 80)
 
     # ファイル一覧表示
     for old_path, new_path in sorted_files:
-        old_name = old_path.name
-        new_name = new_path.name
-        print(f"{old_name:<40} {new_name:<40}")
+        old_name = pad_text(old_path.name, old_name_width)
+        new_name = pad_text(new_path.name, new_name_width)
+        print(f"{old_name} {new_name}")
 
     display_cui_table_footer(len(renamed_files))
 

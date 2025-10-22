@@ -12,6 +12,8 @@ from ..lib.cli_utils import (
     print_no_files_message,
     truncate_text,
     natural_sort_key,
+    pad_text,
+    get_display_width,
 )
 
 from ..lib.gui_utils import (
@@ -320,20 +322,54 @@ def display_cui_table(processed_files: List[Tuple[Path, ID3Tags]], dry_run: bool
     # 自然順でソート
     sorted_files = sorted(processed_files, key=lambda x: natural_sort_key(str(x[0])))
 
-    # ヘッダー表示
-    print(
-        f"{'ファイルパス':<40} {'タイトル':<30} {'アーティスト':<20} {'アルバム':<20} {'トラック':<8}"
+    # 各カラムの最大幅を計算
+    max_file_width = max(
+        [get_display_width(file_path.name) for file_path, _ in sorted_files],
+        default=0
     )
-    print("-" * 120)
+    max_title_width = max(
+        [get_display_width(tags["track_name"]) for _, tags in sorted_files],
+        default=0
+    )
+    max_artist_width = max(
+        [get_display_width(tags["artist_name"]) for _, tags in sorted_files],
+        default=0
+    )
+    max_album_width = max(
+        [get_display_width(tags["album_name"]) for _, tags in sorted_files],
+        default=0
+    )
+    
+    # ヘッダーの幅も考慮
+    file_width = max(max_file_width, get_display_width("ファイルパス"))
+    title_width = max(max_title_width, get_display_width("タイトル"))
+    artist_width = max(max_artist_width, get_display_width("アーティスト"))
+    album_width = max(max_album_width, get_display_width("アルバム"))
+    track_width = max(
+        max([len(str(tags["track_number"])) for _, tags in sorted_files], default=0),
+        get_display_width("トラック")
+    )
+
+    # 区切り線の長さを計算
+    separator_length = file_width + title_width + artist_width + album_width + track_width + 4
+
+    # ヘッダー表示
+    file_header = pad_text("ファイルパス", file_width)
+    title_header = pad_text("タイトル", title_width)
+    artist_header = pad_text("アーティスト", artist_width)
+    album_header = pad_text("アルバム", album_width)
+    track_header = pad_text("トラック", track_width)
+    print(f"{file_header} {title_header} {artist_header} {album_header} {track_header}")
+    print("-" * separator_length)
 
     # ファイル一覧表示
     for file_path, tags in sorted_files:
-        file_name = file_path.name
-        title = truncate_text(tags["track_name"], 30)
-        artist = truncate_text(tags["artist_name"], 20)
-        album = truncate_text(tags["album_name"], 20)
-        track = str(tags["track_number"])
-        print(f"{file_name:<40} {title:<30} {artist:<20} {album:<20} {track:<8}")
+        file_name = pad_text(file_path.name, file_width)
+        title = pad_text(tags["track_name"], title_width)
+        artist = pad_text(tags["artist_name"], artist_width)
+        album = pad_text(tags["album_name"], album_width)
+        track = pad_text(str(tags["track_number"]), track_width)
+        print(f"{file_name} {title} {artist} {album} {track}")
 
     display_cui_table_footer(len(processed_files), 120)
 

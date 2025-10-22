@@ -6,6 +6,7 @@ CLI関連の共通ユーティリティ関数
 """
 
 import argparse
+import unicodedata
 
 
 def get_user_confirmation(action_text: str, dry_run: bool = False) -> bool:
@@ -133,3 +134,76 @@ def natural_sort_key(text: str) -> list:
         return int(s) if s.isdigit() else s
 
     return [atoi(c) for c in re.split(r"(\d+)", text)]
+
+
+def get_display_width(text: str) -> int:
+    """
+    文字列の表示幅を計算する（全角文字を2文字としてカウント）
+
+    Args:
+        text: 表示幅を計算する文字列
+
+    Returns:
+        表示幅（全角文字は2、半角文字は1としてカウント）
+    """
+    import unicodedata
+
+    width = 0
+    for char in text:
+        # East Asian Width プロパティを取得
+        # 'F' (Fullwidth) と 'W' (Wide) は全角文字
+        if unicodedata.east_asian_width(char) in ("F", "W"):
+            width += 2
+        else:
+            width += 1
+    return width
+
+
+def pad_text(text: str, target_width: int) -> str:
+    """
+    文字列を指定された表示幅にパディングする（全角文字を考慮）
+
+    Args:
+        text: パディングする文字列
+        target_width: 目標の表示幅
+
+    Returns:
+        パディングされた文字列
+    """
+    current_width = get_display_width(text)
+    padding = target_width - current_width
+    if padding > 0:
+        return text + " " * padding
+    return text
+
+
+def truncate_text_with_width(text: str, max_width: int) -> str:
+    """
+    文字列を指定された表示幅に切り詰める（全角文字を考慮）
+
+    Args:
+        text: 切り詰める文字列
+        max_width: 最大表示幅
+
+    Returns:
+        切り詰められた文字列（必要に応じて "..." を追加）
+    """
+    if get_display_width(text) <= max_width:
+        return text
+
+    # "..." の表示幅は3
+    ellipsis = "..."
+    ellipsis_width = 3
+    target_width = max_width - ellipsis_width
+
+    result = ""
+    current_width = 0
+
+    for char in text:
+        char_width = 2 if unicodedata.east_asian_width(char) in ("F", "W") else 1
+        if current_width + char_width > target_width:
+            break
+        result += char
+        current_width += char_width
+
+    return result + ellipsis
